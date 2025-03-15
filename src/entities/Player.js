@@ -17,6 +17,15 @@ export default class Player {
         this.shootDelay = 200; // 0.2 seconds between shots
         this.bullets = this.scene.physics.add.group();
         
+        // Create physics body for collision detection
+        this.body = scene.physics.add.sprite(
+            this.position.x + 400, // Convert Three.js coordinates to Phaser coordinates
+            -this.position.y + 300, // Convert Three.js coordinates to Phaser coordinates
+            'bullet' // Reuse bullet sprite as collision body
+        );
+        this.body.setVisible(false); // Hide the sprite since we're using 3D model
+        this.body.setCircle(15); // Set collision circle size
+        
         this.createTemporaryModel();
     }
 
@@ -65,6 +74,12 @@ export default class Player {
         if (this.model) {
             this.model.position.set(this.position.x, this.position.y, this.position.z);
         }
+        
+        // Update physics body position
+        if (this.body) {
+            this.body.x = this.position.x + 400;
+            this.body.y = -this.position.y + 300;
+        }
     }
 
     update(pointer) {
@@ -105,6 +120,11 @@ export default class Player {
             this.model.geometry.dispose();
             this.model.material.dispose();
             this.model = null;
+        }
+        
+        if (this.body) {
+            this.body.destroy();
+            this.body = null;
         }
     }
 } 

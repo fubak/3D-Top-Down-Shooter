@@ -26,6 +26,7 @@ export default class Enemy {
             'bullet' // Reuse bullet sprite as collision body
         );
         this.body.setVisible(false); // Hide the sprite since we're using 3D model
+        this.body.setCircle(10); // Set collision circle size
     }
 
     update(time) {
@@ -53,10 +54,20 @@ export default class Enemy {
             this.body.y + 20,
             'bullet'
         );
-        bullet.setTint(0xff0000); // Red tint for enemy bullets
-        bullet.setVelocityY(300); // Move downward
         
-        // Destroy bullet when it goes off screen
+        // Configure bullet properties
+        bullet.setTint(0xff0000); // Red tint for enemy bullets
+        
+        // Ensure the bullet has velocity and keeps it
+        bullet.body.velocity.y = 300; // Move downward
+        bullet.body.allowGravity = false;
+        
+        // Add bullet to the enemyBullets group for collision detection
+        if (this.scene.enemyBullets) {
+            this.scene.enemyBullets.add(bullet);
+        }
+        
+        // Set up world bounds for automatic cleanup
         bullet.checkWorldBounds = true;
         bullet.outOfBoundsKill = true;
         

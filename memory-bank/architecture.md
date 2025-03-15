@@ -219,3 +219,104 @@ Coordinate System Integration:
 - Three.js coordinates: Centered at (0,0), range: (-300 to 300, -300 to 300)
 - Phaser coordinates: Top-left origin (0,0), range: (0 to 800, 0 to 600)
 - Conversion handled in Enemy class for seamless integration
+
+### Collision Detection System
+
+The game implements a hybrid collision detection system that bridges the gap between the 3D visual representation (Three.js) and the 2D physics system (Phaser). This approach allows for visually appealing 3D models while maintaining efficient collision detection.
+
+#### Core Components
+
+1. **Physics Bodies**
+   - **Player**: Invisible circular physics body (radius: 15px) that follows the player's 3D model
+   - **Enemies**: Invisible circular physics bodies (radius: 10px) that follow each enemy's 3D model
+   - **Bullets**: Small circular sprites (8x8px) with physics properties
+
+2. **Collision Groups**
+   - **Player Bullets**: Managed by the Player class as a Phaser physics group
+   - **Enemy Bullets**: Managed by GameplayScene as a separate physics group
+   - Groups enable efficient collision detection and memory management
+
+3. **Collision Detection Logic**
+   - Located in GameplayScene's update method
+   - Uses Phaser's `physics.overlap()` method for efficient detection
+   - Separate overlap checks for:
+     - Player bullets vs. enemy bodies
+     - Enemy bullets vs. player body
+
+4. **Collision Handlers**
+   - `handlePlayerBulletEnemyCollision()`: Destroys both bullet and enemy
+   - `handleEnemyBulletPlayerCollision()`: Destroys bullet and damages player
+
+#### Coordinate System Management
+
+A critical aspect of the collision system is the proper conversion between coordinate systems:
+
+1. **Three.js (3D World)**
+   - Center origin (0,0)
+   - X: -400 to +400
+   - Y: -300 to +300 (positive is up)
+
+2. **Phaser (2D World)**
+   - Top-left origin (0,0)
+   - X: 0 to 800
+   - Y: 0 to 600 (positive is down)
+
+Conversion formulas implemented in the codebase:
+- Three.js to Phaser:
+  - X = threeJS.x + 400
+  - Y = -threeJS.y + 300
+- Phaser to Three.js:
+  - X = phaser.x - 400
+  - Y = -(phaser.y - 300)
+
+#### Bullet Management
+
+The system includes specialized handling for bullets:
+- **Player Bullets**: Travel upward, managed by Player class
+- **Enemy Bullets**: Travel downward, managed by GameplayScene
+- Both use Phaser's group system for efficient object pooling
+- Automatic cleanup when bullets leave the screen:
+  - Using `checkWorldBounds` and `outOfBoundsKill` properties
+  - Additional cleanup in update loops for reliability
+
+#### Bullet Physics Implementation
+
+The game uses a robust approach to ensure consistent bullet movement:
+
+1. **Direct Velocity Setting**
+   - Enemy bullets: `bullet.body.velocity.y = 300` directly sets the physics body velocity
+   - Player bullets: `bullet.setVelocityY(-400)` uses Phaser's helper method
+   - Direct velocity setting ensures the physics engine properly tracks the bullet
+
+2. **Physics Group Configuration**
+   - Enemy bullets group is configured with default physics properties:
+   ```javascript
+   this.enemyBullets = this.physics.add.group({
+       allowGravity: false,
+       velocityY: 300
+   });
+   ```
+   - This ensures new bullets added to the group inherit these properties
+
+3. **Velocity Maintenance**
+   - The update loop includes velocity checks to ensure bullets maintain movement:
+   ```javascript
+   if (bullet.body && bullet.body.velocity.y < 10) {
+       bullet.body.velocity.y = 300;
+   }
+   ```
+   - This prevents bullets from stopping due to physics anomalies
+
+4. **Gravity Disabling**
+   - `bullet.body.allowGravity = false` ensures bullets aren't affected by the physics world gravity
+   - This maintains consistent velocity regardless of other physics settings
+
+This multi-layered approach ensures bullets behave predictably even when the entities that created them are destroyed.
+
+#### Health System
+
+The collision system integrates with a simple health system:
+- Player starts with 100 health points
+- Each enemy bullet hit reduces health by 10 points
+- Game over condition triggered when health reaches 0
+- Currently logs game over state (to be expanded in future steps)

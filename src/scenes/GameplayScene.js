@@ -13,6 +13,8 @@ export default class GameplayScene extends Scene {
         this.enemies = [];
         this.lastEnemySpawn = 0;
         this.enemySpawnInterval = 3000; // Spawn enemy every 3 seconds
+        this.enemyBullets = null; // Group for enemy bullets
+        this.playerHealth = 100; // Player health
     }
 
     preload() {
@@ -36,6 +38,12 @@ export default class GameplayScene extends Scene {
 
         // Create player
         this.player = new Player(this, this.threeJSManager);
+
+        // Create a group for enemy bullets with physics
+        this.enemyBullets = this.physics.add.group({
+            allowGravity: false,
+            velocityY: 300
+        });
 
         // Create an invisible rectangle for input handling
         const inputRect = this.add.rectangle(400, 300, 800, 600, 0x000000, 0);
@@ -102,12 +110,83 @@ export default class GameplayScene extends Scene {
             }
             return isAlive;
         });
+
+        // Clean up enemy bullets that are off screen
+        if (this.enemyBullets) {
+            this.enemyBullets.children.each(bullet => {
+                if (bullet.y > 650) {
+                    bullet.destroy();
+                }
+                
+                // Ensure bullets are moving
+                if (bullet.body && bullet.body.velocity.y < 10) {
+                    bullet.body.velocity.y = 300;
+                }
+            });
+        }
+
+        // Check for collisions between player bullets and enemies
+        if (this.player && this.player.bullets) {
+            this.enemies.forEach(enemy => {
+                this.physics.overlap(
+                    this.player.bullets,
+                    enemy.body,
+                    (bullet, enemyBody) => this.handlePlayerBulletEnemyCollision(bullet, enemy),
+                    null,
+                    this
+                );
+            });
+        }
+
+        // Check for collisions between enemy bullets and player
+        if (this.player && this.player.body) {
+            this.physics.overlap(
+                this.enemyBullets,
+                this.player.body,
+                this.handleEnemyBulletPlayerCollision,
+                null,
+                this
+            );
+        }
+    }
+
+    handlePlayerBulletEnemyCollision(bullet, enemy) {
+        // Destroy the bullet
+        bullet.destroy();
+        
+        // Remove the enemy
+        const index = this.enemies.indexOf(enemy);
+        if (index !== -1) {
+            this.enemies.splice(index, 1);
+            enemy.destroy();
+            console.log('Enemy destroyed by player bullet');
+        }
+    }
+
+    handleEnemyBulletPlayerCollision(bullet, playerBody) {
+        // Destroy the bullet
+        bullet.destroy();
+        
+        // Damage the player
+        this.playerHealth -= 10;
+        console.log('Player hit! Health:', this.playerHealth);
+        
+        // Check if player is defeated
+        if (this.playerHealth <= 0) {
+            console.log('Player defeated!');
+            // For now, just log the defeat. In a full game, we would handle game over here.
+        }
     }
 
     destroy() {
         // Clean up enemies
         this.enemies.forEach(enemy => enemy.destroy());
         this.enemies = [];
+
+        // Clean up all enemy bullets
+        if (this.enemyBullets) {
+            this.enemyBullets.clear(true, true);
+        }
 
         if (this.player) {
             this.player.destroy();

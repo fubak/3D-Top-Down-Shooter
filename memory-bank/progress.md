@@ -183,3 +183,60 @@ Technical Details:
     - Three.js: Center origin (-400 to 400, -300 to 300)
     - Phaser: Top-left origin (0 to 800, 0 to 600)
     - Proper conversion implemented for accurate bullet spawning
+
+## Step 11: Collision Detection Implementation - Completed
+**Completed on:** March 15, 2024
+**Validated on:** March 15, 2024
+
+### What we did:
+1. Implemented collision detection between player bullets and enemies:
+   - Added physics body to each enemy for collision detection
+   - Used Phaser's overlap detection between player bullets and enemy bodies
+   - Created collision handler to destroy both bullet and enemy on impact
+
+2. Implemented collision detection between enemy bullets and player:
+   - Added physics body to player for collision detection
+   - Created dedicated group for enemy bullets
+   - Used Phaser's overlap detection between enemy bullets and player body
+   - Implemented player health system with damage on hit
+
+3. Added player health system:
+   - Initialized player health at 100
+   - Reduced health by 10 for each enemy bullet hit
+   - Added game over detection when health reaches 0
+
+4. Fixed bullet behavior:
+   - Ensured enemy bullets continue moving after enemy destruction
+   - Added proper cleanup for off-screen bullets
+   - Implemented bullet pooling through Phaser's group system
+   - Added world bounds detection for automatic bullet cleanup
+   - Fixed issue with enemy bullets not moving by directly setting velocity properties
+   - Added velocity maintenance in the update loop to ensure consistent movement
+
+### Technical Implementation:
+- Physics bodies:
+  - Player: Circular collision body (radius: 15px)
+  - Enemies: Circular collision bodies (radius: 10px)
+  - Bullets: Default sprite size (8x8px)
+- Collision groups:
+  - Player bullets: Managed by Player class
+  - Enemy bullets: Managed by GameplayScene with group physics configuration
+- Coordinate system handling:
+  - Proper conversion between Three.js and Phaser coordinates for accurate collision detection
+  - Synchronized 3D models with 2D physics bodies
+- Bullet physics:
+  - Direct velocity setting: `bullet.body.velocity.y = 300`
+  - Group configuration: `{ allowGravity: false, velocityY: 300 }`
+  - Velocity maintenance in update loop
+
+### Test Results:
+- ✅ Player bullets destroy enemies on collision
+- ✅ Enemy bullets damage player on collision
+- ✅ Player health decreases appropriately
+- ✅ Game over detection works when health reaches 0
+- ✅ Enemy bullets continue moving after enemy destruction
+- ✅ All bullets are properly cleaned up when off-screen
+- ✅ Enemy bullets move consistently downward
+
+### Next Steps:
+Ready to proceed with Step 12: Add Scoring System
