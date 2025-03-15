@@ -5,8 +5,11 @@
 stellar-vanguard/
 ├── src/
 │   ├── main.js           # Game entry point and configuration
-│   └── scenes/
-│       └── BootScene.js  # Initial loading scene
+│   ├── scenes/
+│   │   ├── BootScene.js  # Initial loading scene
+│   │   └── MainMenuScene.js # Main menu interface
+│   └── utils/
+│       └── ThreeJSManager.js # Three.js integration manager
 ├── assets/               # Game assets (images, audio, models)
 ├── lib/                  # External libraries
 ├── index.html           # Main HTML entry point
@@ -35,6 +38,49 @@ stellar-vanguard/
   - Currently displays loading indicator
   - Will transition to MainMenuScene (to be implemented)
 
+- **MainMenuScene.js**
+  - Primary responsibility: Main menu interface and game entry point
+  - Features:
+    - Displays game title and background
+    - Provides interactive play button with hover effects
+    - Manages scene transition to GameplayScene
+  - Implementation details:
+    - Uses loaded background asset from BootScene
+    - Implements responsive UI elements with proper centering
+    - Uses Phaser's text objects with interactive capabilities
+    - Follows clean code practices with modular event handling
+    - Maintains separation of concerns between UI and logic
+
+### Three.js Integration
+- **ThreeJSManager.js**
+  - Primary responsibility: Manages 3D rendering and integration with Phaser
+  - Features:
+    - WebGL renderer with alpha channel for transparency
+    - Scene and camera management
+    - 3D model loading via GLTFLoader
+    - Lighting system with ambient and directional lights
+  - Implementation details:
+    - Canvas positioning for proper overlay with Phaser
+    - Resource management and cleanup
+    - Responsive design support
+    - Utility methods for scene object manipulation
+
+### Technical Integration
+- **Renderer Layering**
+  - Three.js canvas positioned absolutely over Phaser canvas
+  - Alpha channel enabled for transparent background
+  - Proper z-index management for layer visibility
+
+- **Resource Management**
+  - Efficient model loading with GLTFLoader
+  - Proper cleanup of 3D resources
+  - Memory management best practices
+
+- **Performance Optimization**
+  - Shared WebGL context considerations
+  - Efficient render loop integration
+  - Resource disposal patterns
+
 ## Technical Decisions
 
 ### Module System
@@ -48,12 +94,11 @@ stellar-vanguard/
 - Browser-native ES modules for simplicity
 
 ### Rendering
-- Phaser.AUTO renderer selection
-  - Automatically chooses WebGL when available
-  - Falls back to Canvas when needed
-- Prepared for Three.js integration
-  - CDN loaded
-  - Will be used for 3D elements
+- **Hybrid Rendering Approach**
+  - Phaser.AUTO renderer for 2D elements
+  - Three.js WebGLRenderer for 3D elements
+  - Transparent overlay system for seamless integration
+  - Proper canvas management and positioning
 
 ### Physics
 - Arcade Physics system
@@ -62,11 +107,13 @@ stellar-vanguard/
   - Debug mode available but disabled by default
 
 ## Future Considerations
-1. Asset loading system (Step 3)
+1. Asset loading system
 2. Scene transitions
-3. Three.js integration for 3D elements
-4. Input management
-5. Game state management
+3. Input management
+4. Game state management
+5. Performance optimization for mobile devices
+6. Advanced 3D effects and particle systems
+7. Model optimization and LOD implementation
 
 # Game Architecture Documentation
 
@@ -85,15 +132,17 @@ The game uses Phaser's scene management system with the following structure:
   - Handles asset loading errors gracefully
 
 ### MainMenuScene (`src/scenes/MainMenuScene.js`)
-- Primary responsibility: Main menu interface
+- Primary responsibility: Main menu interface and game entry point
 - Features:
   - Displays game title and background
-  - Provides interactive play button
-  - Manages scene transitions
+  - Provides interactive play button with hover effects
+  - Manages scene transition to GameplayScene
 - Implementation details:
-  - Uses loaded background asset
-  - Implements interactive UI elements
-  - Handles scene transition to GameplayScene (to be implemented)
+  - Uses loaded background asset from BootScene
+  - Implements responsive UI elements with proper centering
+  - Uses Phaser's text objects with interactive capabilities
+  - Follows clean code practices with modular event handling
+  - Maintains separation of concerns between UI and logic
 
 ## Asset Management
 - Assets are organized in the `assets/` directory:
