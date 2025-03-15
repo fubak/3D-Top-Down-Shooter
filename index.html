@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Stellar Vanguard</title>
+    <link rel="icon" href="data:,">
     <style>
         body {
             margin: 0;
@@ -18,11 +19,16 @@
             display: block;
         }
     </style>
+    <script type="importmap">
+    {
+        "imports": {
+            "phaser": "https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.esm.js"
+        }
+    }
+    </script>
 </head>
 <body>
     <div id="game"></div>
-    <!-- Include Phaser from CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
     <!-- Include Three.js from CDN -->
     <script src="https://cdn.jsdelivr.net/npm/three@0.162.0/build/three.min.js"></script>
     <!-- Game entry point -->
