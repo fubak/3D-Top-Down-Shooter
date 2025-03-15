@@ -217,17 +217,42 @@ class FirebaseManager {
      * @returns {Promise} - Update result
      */
     async updateUserDisplayName(userId, displayName) {
+        console.log(`Attempting to update display name for user ${userId} to "${displayName}"`);
+        
         if (!this.db) {
+            console.error("Firebase database not available");
             return Promise.reject(new Error("Firebase database not available"));
         }
 
         try {
-            await this.db.ref(`users/${userId}`).update({
-                displayName: displayName
+            console.log(`Writing to database path: users/${userId}`);
+            const userRef = this.db.ref(`users/${userId}`);
+            
+            // First check if we can read from this location (to test permissions)
+            try {
+                const snapshot = await userRef.once('value');
+                console.log("Current user data:", snapshot.val());
+            } catch (readError) {
+                console.error("Error reading user data (permission issue?):", readError);
+            }
+            
+            // Now try to update
+            await userRef.update({
+                displayName: displayName,
+                lastUpdated: new Date().toISOString()
             });
+            
+            console.log(`Display name successfully updated to "${displayName}"`);
             return true;
         } catch (error) {
             console.error("Error updating display name:", error);
+            console.error("Error code:", error.code);
+            console.error("Error message:", error.message);
+            
+            if (error.code === 'PERMISSION_DENIED') {
+                console.error("This is a Firebase permissions issue. Check your database rules.");
+            }
+            
             return Promise.reject(error);
         }
     }
@@ -240,39 +265,130 @@ class FirebaseManager {
      * @returns {Promise} - Save result
      */
     async saveHighScoreWithName(userId, score, displayName) {
+        console.log(`Attempting to save score ${score} for user ${userId} with name "${displayName}"`);
+        
         if (!this.db) {
+            console.error("Firebase database not available");
             return Promise.reject(new Error("Firebase database not available"));
         }
 
         try {
+            console.log(`Writing to database path: users/${userId}`);
             const userRef = this.db.ref(`users/${userId}`);
             
-            // Get current high score
-            const snapshot = await userRef.once('value');
-            const userData = snapshot.val() || {};
-            const currentHighScore = userData.highScore || 0;
+            // First check if we can read from this location (to test permissions)
+            let currentHighScore = 0;
+            try {
+                const snapshot = await userRef.once('value');
+                const userData = snapshot.val() || {};
+                currentHighScore = userData.highScore || 0;
+                console.log("Current user data:", userData);
+                console.log(`Current high score: ${currentHighScore}`);
+            } catch (readError) {
+                console.error("Error reading user data (permission issue?):", readError);
+            }
             
             // Only update if new score is higher
             if (score > currentHighScore) {
+                console.log(`New score ${score} is higher than current high score ${currentHighScore}, updating...`);
                 await userRef.update({
                     highScore: score,
                     displayName: displayName,
                     lastPlayed: new Date().toISOString()
                 });
-                console.log(`High score updated: ${score} for ${displayName}`);
+                console.log(`High score updated to ${score} for ${displayName}`);
                 return true;
             } else {
                 // Even if score isn't higher, update the display name
+                console.log(`Score ${score} is not higher than current high score ${currentHighScore}, only updating name...`);
                 await userRef.update({
                     displayName: displayName,
                     lastPlayed: new Date().toISOString()
                 });
-                console.log(`Display name updated to ${displayName}, but score not high enough to update: ${score} <= ${currentHighScore}`);
+                console.log(`Display name updated to ${displayName}`);
                 return false;
             }
         } catch (error) {
             console.error("Error saving high score with name:", error);
+            console.error("Error code:", error.code);
+            console.error("Error message:", error.message);
+            
+            if (error.code === 'PERMISSION_DENIED') {
+                console.error("This is a Firebase permissions issue. Check your database rules.");
+            }
+            
             return Promise.reject(error);
+        }
+    }
+
+    /**
+     * Test database access to diagnose permission issues
+     * @returns {Promise<Object>} - Test results
+     */
+    async testDatabaseAccess() {
+        console.log("Testing Firebase database access...");
+        
+        const results = {
+            authenticated: false,
+            canReadUsers: false,
+            canWriteOwnData: false,
+            error: null
+        };
+        
+        if (!this.auth || !this.db) {
+            console.error("Firebase not initialized");
+            results.error = "Firebase not initialized";
+            return results;
+        }
+        
+        try {
+            // Check if user is authenticated
+            const user = this.auth.currentUser;
+            results.authenticated = !!user;
+            console.log(`User authenticated: ${results.authenticated}`);
+            
+            if (user) {
+                console.log(`Current user ID: ${user.uid}`);
+                console.log(`Current user email: ${user.email}`);
+                
+                // Test reading users node
+                try {
+                    console.log("Testing read access to /users node...");
+                    const usersSnapshot = await this.db.ref('users').once('value');
+                    console.log("Successfully read /users node");
+                    results.canReadUsers = true;
+                    
+                    // Log the first few users
+                    const users = usersSnapshot.val() || {};
+                    const userIds = Object.keys(users).slice(0, 3);
+                    console.log(`Found ${Object.keys(users).length} users. First few: ${userIds.join(', ')}`);
+                } catch (readError) {
+                    console.error("Error reading /users node:", readError);
+                    results.error = `Cannot read users: ${readError.message}`;
+                }
+                
+                // Test writing to own user data
+                try {
+                    console.log(`Testing write access to /users/${user.uid} node...`);
+                    const testData = {
+                        testField: `Test at ${new Date().toISOString()}`
+                    };
+                    await this.db.ref(`users/${user.uid}/test`).set(testData);
+                    console.log("Successfully wrote test data to user node");
+                    results.canWriteOwnData = true;
+                } catch (writeError) {
+                    console.error("Error writing to user node:", writeError);
+                    results.error = `Cannot write to own data: ${writeError.message}`;
+                }
+            } else {
+                results.error = "User not authenticated";
+            }
+            
+            return results;
+        } catch (error) {
+            console.error("Error testing database access:", error);
+            results.error = error.message;
+            return results;
         }
     }
 }

@@ -30,6 +30,14 @@ export default class MainMenuScene extends Phaser.Scene {
         })
         .setOrigin(0.5)
         .setInteractive();
+        
+        // Add event listener to unlock audio context
+        this.input.on('pointerdown', () => {
+            if (this.game.sound && this.game.sound.context && this.game.sound.context.state === 'suspended') {
+                this.game.sound.context.resume();
+                console.log('Audio context resumed after user interaction');
+            }
+        });
 
         // Add hover effect
         this.playButton.on('pointerover', () => {
@@ -49,7 +57,9 @@ export default class MainMenuScene extends Phaser.Scene {
         // Add click handler
         this.playButton.on('pointerdown', () => {
             if (this.isLoggedIn) {
-                this.scene.start('GameplayScene');
+                // Get the current user and pass it to the GameplayScene
+                const currentUser = firebaseManager.getCurrentUser();
+                this.scene.start('GameplayScene', { currentUser });
             } else {
                 this.loginStatus = 'Please log in to play';
                 this.updateLoginStatus();
@@ -284,6 +294,9 @@ export default class MainMenuScene extends Phaser.Scene {
         // Add logout button
         this.addLogoutButton();
         
+        // Add test database button (for debugging)
+        this.addTestDatabaseButton();
+        
         // Display high score if available
         this.displayHighScore(user.uid);
     }
@@ -403,5 +416,69 @@ export default class MainMenuScene extends Phaser.Scene {
             this.loginStatus = `Logout failed: ${error.message}`;
             this.updateLoginStatus();
         }
+    }
+
+    addTestDatabaseButton() {
+        // Add test database button
+        this.testDbButton = this.add.text(700, 100, 'Test DB', {
+            font: '16px Arial',
+            fill: '#ffffff',
+            backgroundColor: '#333333',
+            padding: { x: 8, y: 4 }
+        })
+        .setOrigin(0.5)
+        .setInteractive();
+
+        // Add hover effect
+        this.testDbButton.on('pointerover', () => {
+            this.testDbButton.setStyle({ fill: '#ffff00' });
+        });
+
+        this.testDbButton.on('pointerout', () => {
+            this.testDbButton.setStyle({ fill: '#ffffff' });
+        });
+
+        // Add click handler
+        this.testDbButton.on('pointerdown', async () => {
+            this.loginStatus = "Testing database access...";
+            this.updateLoginStatus();
+            
+            try {
+                const results = await firebaseManager.testDatabaseAccess();
+                console.log("Database access test results:", results);
+                
+                let statusText = "DB Test: ";
+                if (results.authenticated) {
+                    statusText += "Auth ✓ ";
+                } else {
+                    statusText += "Auth ✗ ";
+                }
+                
+                if (results.canReadUsers) {
+                    statusText += "Read ✓ ";
+                } else {
+                    statusText += "Read ✗ ";
+                }
+                
+                if (results.canWriteOwnData) {
+                    statusText += "Write ✓";
+                } else {
+                    statusText += "Write ✗";
+                }
+                
+                this.loginStatus = statusText;
+                this.updateLoginStatus();
+                
+                if (results.error) {
+                    console.error("Database test error:", results.error);
+                    this.loginStatus += ` Error: ${results.error}`;
+                    this.updateLoginStatus();
+                }
+            } catch (error) {
+                console.error("Error running database test:", error);
+                this.loginStatus = `Test error: ${error.message}`;
+                this.updateLoginStatus();
+            }
+        });
     }
 } 

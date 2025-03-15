@@ -185,7 +185,41 @@ export default class ThreeJSManager {
         }
     }
 
-    // Method to clean up Three.js resources when switching scenes
+    /**
+     * Clear all objects from the scene
+     */
+    clear() {
+        this.debugLog("Clearing all objects from Three.js scene");
+        
+        // Remove all objects from the scene
+        while(this.scene.children.length > 0) { 
+            const object = this.scene.children[0];
+            
+            // Properly dispose of geometries and materials to prevent memory leaks
+            if (object.geometry) {
+                object.geometry.dispose();
+            }
+            
+            if (object.material) {
+                if (Array.isArray(object.material)) {
+                    object.material.forEach(material => material.dispose());
+                } else {
+                    object.material.dispose();
+                }
+            }
+            
+            this.scene.remove(object);
+        }
+        
+        // Force renderer to clear its cache
+        this.renderer.renderLists.dispose();
+        
+        this.debugLog("Three.js scene cleared");
+    }
+
+    /**
+     * Destroy the Three.js manager and clean up resources
+     */
     destroy() {
         try {
             this.debugLog("Destroying ThreeJSManager");

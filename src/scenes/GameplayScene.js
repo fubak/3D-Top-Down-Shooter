@@ -30,6 +30,14 @@ export default class GameplayScene extends Scene {
         }
     }
 
+    init(data) {
+        // Receive data from previous scene
+        if (data && data.currentUser) {
+            this.currentUser = data.currentUser;
+            this.debugLog(`Received user from previous scene: ${this.currentUser.uid}`);
+        }
+    }
+
     preload() {
         // Create a simple bullet sprite if it doesn't exist
         const graphics = this.add.graphics();
@@ -42,6 +50,10 @@ export default class GameplayScene extends Scene {
     create() {
         try {
             this.debugLog("Creating GameplayScene");
+            
+            // Get the current user from Firebase
+            this.currentUser = firebaseManager.getCurrentUser();
+            this.debugLog(this.currentUser ? `User authenticated: ${this.currentUser.uid}` : "No authenticated user");
             
             // Initialize ThreeJS Manager
             this.threeManager = new ThreeJSManager(this.game.canvas);
@@ -288,7 +300,8 @@ export default class GameplayScene extends Scene {
             }
 
             // Check for collisions between enemy bullets and player
-            if (this.player && this.player.body) {
+            // This is now separate from enemy existence
+            if (this.player && this.player.body && this.enemyBullets) {
                 this.physics.overlap(
                     this.enemyBullets,
                     this.player.body,
@@ -393,23 +406,40 @@ export default class GameplayScene extends Scene {
     // Add a method to clean up all game elements
     cleanupGameElements() {
         // Clean up enemies
-        this.enemies.forEach(enemy => enemy.destroy());
-        this.enemies = [];
+        if (this.enemies && this.enemies.length > 0) {
+            console.log(`Cleaning up ${this.enemies.length} enemies`);
+            this.enemies.forEach(enemy => {
+                if (enemy) enemy.destroy();
+            });
+            this.enemies = [];
+        }
         
         // Clean up all enemy bullets
         if (this.enemyBullets) {
+            console.log("Cleaning up enemy bullets");
             this.enemyBullets.clear(true, true);
         }
         
         // Clean up player bullets
         if (this.player && this.player.bullets) {
+            console.log("Cleaning up player bullets");
             this.player.bullets.clear(true, true);
         }
         
         // Stop player shooting
         if (this.player) {
+            console.log("Stopping player shooting");
             this.player.stopShooting = true;
         }
+        
+        // Clear any active tweens
+        this.tweens.killAll();
+        
+        // Clear any active timers
+        this.time.removeAllEvents();
+        
+        // Clear any physics bodies
+        this.physics.world.colliders.destroy();
     }
 
     // Override the scene's shutdown method to ensure cleanup
@@ -519,17 +549,29 @@ export default class GameplayScene extends Scene {
     victory() {
         console.log('Victory!');
         
-        // Clean up game elements
+        // Clean up game elements thoroughly
         this.cleanupGameElements();
         
+        // Additional cleanup to ensure everything is removed
+        if (this.player) {
+            this.player.destroy();
+            this.player = null;
+        }
+        
+        if (this.threeManager) {
+            this.threeManager.clear(); // Clear all 3D objects
+        }
+        
         // Create a semi-transparent overlay
-        const overlay = this.add.rectangle(400, 300, 800, 600, 0x000000, 0.7);
+        const overlay = this.add.rectangle(400, 300, 800, 600, 0x000000, 0.8);
+        overlay.setDepth(999);
         
         // Create a container for victory UI
         const victoryContainer = this.add.container(0, 0);
+        victoryContainer.setDepth(1000);
         
         // Display victory text
-        victoryContainer.add(this.add.text(400, 150, 'VICTORY!', {
+        victoryContainer.add(this.add.text(400, 120, 'VICTORY!', {
             fontSize: '64px',
             fill: '#00FF00',
             stroke: '#000000',
@@ -537,19 +579,20 @@ export default class GameplayScene extends Scene {
         }).setOrigin(0.5));
         
         // Display score
-        victoryContainer.add(this.add.text(400, 220, `Final Score: ${this.score}`, {
+        victoryContainer.add(this.add.text(400, 190, `Final Score: ${this.score}`, {
             fontSize: '32px',
             fill: '#FFFFFF',
             stroke: '#000000',
             strokeThickness: 4
         }).setOrigin(0.5));
         
-        // Create name input field
+        // Create name input field (positioned higher)
         this.createNameInput();
         
-        // Add leaderboard button
-        const leaderboardButton = this.add.text(400, 400, 'View Leaderboard', {
-            fontSize: '32px',
+        // Add buttons in a better layout
+        // Leaderboard button
+        const leaderboardButton = this.add.text(400, 420, 'View Leaderboard', {
+            fontSize: '28px',
             fill: '#FFFFFF',
             backgroundColor: '#4a4a4a',
             padding: { x: 20, y: 10 }
@@ -572,8 +615,8 @@ export default class GameplayScene extends Scene {
         });
         
         // Add play again button
-        const restartButton = this.add.text(400, 470, 'Play Again', {
-            fontSize: '32px',
+        const restartButton = this.add.text(250, 490, 'Play Again', {
+            fontSize: '28px',
             fill: '#FFFFFF',
             backgroundColor: '#4a4a4a',
             padding: { x: 20, y: 10 }
@@ -598,8 +641,8 @@ export default class GameplayScene extends Scene {
         });
         
         // Add main menu button
-        const menuButton = this.add.text(400, 540, 'Main Menu', {
-            fontSize: '32px',
+        const menuButton = this.add.text(550, 490, 'Main Menu', {
+            fontSize: '28px',
             fill: '#FFFFFF',
             backgroundColor: '#4a4a4a',
             padding: { x: 20, y: 10 }
@@ -627,62 +670,309 @@ export default class GameplayScene extends Scene {
         victoryContainer.add(leaderboardButton);
         victoryContainer.add(restartButton);
         victoryContainer.add(menuButton);
-        
-        // Bring container to top to ensure buttons are clickable
-        victoryContainer.setDepth(1000);
     }
     
     createNameInput() {
-        // Create a label for the input field
+        // Clean up any existing name input first
+        this.cleanupNameInput();
+        
+        // Create container for name input
+        const nameInputContainer = document.createElement('div');
+        nameInputContainer.style.position = 'absolute';
+        nameInputContainer.style.top = '230px';
+        nameInputContainer.style.left = '50%';
+        nameInputContainer.style.transform = 'translateX(-50%)';
+        nameInputContainer.style.display = 'flex';
+        nameInputContainer.style.flexDirection = 'column';
+        nameInputContainer.style.alignItems = 'center';
+        nameInputContainer.style.zIndex = '1001'; // Higher than other UI elements
+        
+        // Create label
         const nameLabel = document.createElement('div');
-        nameLabel.textContent = 'Enter your name for the leaderboard:';
-        nameLabel.style.position = 'absolute';
-        nameLabel.style.top = '280px';
-        nameLabel.style.left = '50%';
-        nameLabel.style.transform = 'translateX(-50%)';
+        nameLabel.textContent = 'Enter Your Name:';
         nameLabel.style.color = 'white';
         nameLabel.style.fontFamily = 'Arial';
         nameLabel.style.fontSize = '20px';
-        nameLabel.style.textAlign = 'center';
+        nameLabel.style.marginBottom = '10px';
+        nameLabel.style.textShadow = '2px 2px 2px black';
         
         // Create the input field
         const nameInput = document.createElement('input');
         nameInput.type = 'text';
         nameInput.id = 'player-name-input';
-        nameInput.style.position = 'absolute';
-        nameInput.style.top = '320px';
-        nameInput.style.left = '50%';
-        nameInput.style.transform = 'translateX(-50%)';
         nameInput.style.width = '300px';
         nameInput.style.padding = '10px';
         nameInput.style.fontSize = '18px';
         nameInput.style.borderRadius = '5px';
         nameInput.style.border = '2px solid #4CAF50';
         nameInput.style.textAlign = 'center';
+        nameInput.style.marginBottom = '10px';
+        nameInput.style.boxShadow = '0 0 5px rgba(0,0,0,0.5)';
         
-        // Set default value to current user's display name or email if available
-        if (this.currentUser) {
-            nameInput.value = this.currentUser.displayName || this.currentUser.email || '';
-        }
+        // Create save button
+        const saveButton = document.createElement('button');
+        saveButton.textContent = 'Save Name';
+        saveButton.style.padding = '8px 20px';
+        saveButton.style.fontSize = '16px';
+        saveButton.style.backgroundColor = '#4CAF50';
+        saveButton.style.color = 'white';
+        saveButton.style.border = 'none';
+        saveButton.style.borderRadius = '5px';
+        saveButton.style.cursor = 'pointer';
+        saveButton.style.marginTop = '10px';
+        saveButton.style.boxShadow = '0 0 5px rgba(0,0,0,0.5)';
         
-        // Add elements to the DOM
-        document.body.appendChild(nameLabel);
-        document.body.appendChild(nameInput);
+        // Add click handler for save button
+        saveButton.addEventListener('click', () => {
+            const name = nameInput.value.trim();
+            if (name) {
+                this.saveNameAndScore(name);
+            } else {
+                alert('Please enter a name');
+            }
+        });
+        
+        // Add elements to the container
+        nameInputContainer.appendChild(nameLabel);
+        nameInputContainer.appendChild(nameInput);
+        nameInputContainer.appendChild(saveButton);
+        
+        // Add container to the DOM
+        document.body.appendChild(nameInputContainer);
         
         // Store references for cleanup
-        this.nameLabel = nameLabel;
+        this.nameInputContainer = nameInputContainer;
         this.nameInput = nameInput;
+        
+        // Focus the input field
+        nameInput.focus();
+    }
+    
+    saveNameAndScore(name) {
+        if (name && name.trim()) {
+            // Check if we have a current user, if not try to get it again
+            if (!this.currentUser) {
+                this.currentUser = firebaseManager.getCurrentUser();
+                console.log("Re-checking authentication status:", this.currentUser ? "Authenticated" : "Not authenticated");
+            }
+            
+            // Save the name immediately
+            const userId = this.currentUser ? this.currentUser.uid : null;
+            if (userId) {
+                console.log(`Saving name "${name}" for user ${userId}`);
+                
+                // Update the display name in Firebase
+                firebaseManager.updateUserDisplayName(userId, name)
+                    .then(() => {
+                        console.log('Display name updated successfully');
+                        
+                        // Save high score with the name
+                        return firebaseManager.saveHighScoreWithName(userId, this.score, name);
+                    })
+                    .then(() => {
+                        console.log('High score saved successfully');
+                        
+                        // Clean up the input field
+                        this.cleanupNameInput();
+                        
+                        // Show the leaderboard
+                        this.displayLeaderboard();
+                    })
+                    .catch(error => {
+                        console.error('Error saving name or score:', error);
+                        alert('Error saving your name. Please try again.');
+                    });
+            } else {
+                console.error('Cannot save name: User not authenticated');
+                alert('You must be logged in to save your name. Please return to the main menu and log in.');
+                
+                // Add a button to return to main menu
+                this.addReturnToMenuButton();
+            }
+        } else {
+            alert('Please enter a valid name');
+        }
+    }
+    
+    addReturnToMenuButton() {
+        // Create a button to return to main menu
+        const menuButton = this.add.text(400, 350, 'Return to Main Menu to Log In', {
+            fontSize: '24px',
+            fill: '#FFFFFF',
+            backgroundColor: '#4a4a4a',
+            padding: { x: 20, y: 10 }
+        })
+        .setOrigin(0.5)
+        .setInteractive()
+        .setDepth(2000);
+        
+        // Add hover effect
+        menuButton.on('pointerover', () => {
+            menuButton.setStyle({ fill: '#ff0' });
+        });
+        
+        menuButton.on('pointerout', () => {
+            menuButton.setStyle({ fill: '#FFFFFF' });
+        });
+        
+        // Add click handler
+        menuButton.on('pointerdown', () => {
+            this.cleanupNameInput();
+            this.startMainMenu();
+        });
+    }
+    
+    displayLeaderboard() {
+        // Create a semi-transparent overlay for the leaderboard
+        const leaderboardOverlay = this.add.rectangle(400, 300, 600, 400, 0x000033, 0.9);
+        leaderboardOverlay.setStrokeStyle(2, 0x4444ff);
+        leaderboardOverlay.setDepth(1001);
+        
+        // Create a container for the leaderboard
+        const leaderboardContainer = this.add.container(0, 0);
+        leaderboardContainer.setDepth(1002);
+        
+        // Add title
+        const title = this.add.text(400, 150, 'LEADERBOARD', {
+            fontSize: '32px',
+            fill: '#ffffff',
+            stroke: '#000000',
+            strokeThickness: 4
+        }).setOrigin(0.5);
+        leaderboardContainer.add(title);
+        
+        // Add loading text
+        const loadingText = this.add.text(400, 300, 'Loading leaderboard...', {
+            fontSize: '20px',
+            fill: '#ffffff'
+        }).setOrigin(0.5);
+        leaderboardContainer.add(loadingText);
+        
+        // Fetch leaderboard data
+        firebaseManager.getLeaderboard(10)
+            .then(leaderboardData => {
+                // Remove loading text
+                loadingText.destroy();
+                
+                if (leaderboardData.length === 0) {
+                    const noScoresText = this.add.text(400, 300, 'No scores yet. Be the first!', {
+                        fontSize: '20px',
+                        fill: '#ffffff'
+                    }).setOrigin(0.5);
+                    leaderboardContainer.add(noScoresText);
+                } else {
+                    // Create header
+                    const rankHeader = this.add.text(200, 200, 'Rank', {
+                        fontSize: '22px',
+                        fill: '#ffff00'
+                    }).setOrigin(0.5);
+                    
+                    const nameHeader = this.add.text(350, 200, 'Player', {
+                        fontSize: '22px',
+                        fill: '#ffff00'
+                    }).setOrigin(0.5);
+                    
+                    const scoreHeader = this.add.text(500, 200, 'Score', {
+                        fontSize: '22px',
+                        fill: '#ffff00'
+                    }).setOrigin(0.5);
+                    
+                    leaderboardContainer.add(rankHeader);
+                    leaderboardContainer.add(nameHeader);
+                    leaderboardContainer.add(scoreHeader);
+                    
+                    // Display entries
+                    const startY = 240;
+                    const spacing = 30;
+                    
+                    leaderboardData.forEach((entry, index) => {
+                        // Highlight current user
+                        const isCurrentUser = this.currentUser && entry.userId === this.currentUser.uid;
+                        const textColor = isCurrentUser ? '#4CAF50' : '#ffffff';
+                        
+                        // Rank with medal for top 3
+                        let rankText = `${index + 1}`;
+                        let rankColor = textColor;
+                        
+                        if (index === 0) {
+                            rankText = '🥇 ' + rankText;
+                            rankColor = '#FFD700'; // Gold
+                        } else if (index === 1) {
+                            rankText = '🥈 ' + rankText;
+                            rankColor = '#C0C0C0'; // Silver
+                        } else if (index === 2) {
+                            rankText = '🥉 ' + rankText;
+                            rankColor = '#CD7F32'; // Bronze
+                        }
+                        
+                        const rank = this.add.text(200, startY + index * spacing, rankText, {
+                            fontSize: '20px',
+                            fill: rankColor
+                        }).setOrigin(0.5);
+                        
+                        const name = this.add.text(350, startY + index * spacing, entry.displayName || 'Anonymous', {
+                            fontSize: '20px',
+                            fill: textColor
+                        }).setOrigin(0.5);
+                        
+                        const score = this.add.text(500, startY + index * spacing, entry.highScore.toString(), {
+                            fontSize: '20px',
+                            fill: textColor
+                        }).setOrigin(0.5);
+                        
+                        leaderboardContainer.add(rank);
+                        leaderboardContainer.add(name);
+                        leaderboardContainer.add(score);
+                    });
+                }
+                
+                // Add close button
+                const closeButton = this.add.text(400, 450, 'Close', {
+                    fontSize: '24px',
+                    fill: '#ffffff',
+                    backgroundColor: '#4a4a4a',
+                    padding: { x: 20, y: 10 }
+                })
+                .setOrigin(0.5)
+                .setInteractive();
+                
+                // Add hover effect
+                closeButton.on('pointerover', () => {
+                    closeButton.setStyle({ fill: '#ff0' });
+                });
+                
+                closeButton.on('pointerout', () => {
+                    closeButton.setStyle({ fill: '#ffffff' });
+                });
+                
+                // Add click handler
+                closeButton.on('pointerdown', () => {
+                    leaderboardContainer.destroy();
+                    leaderboardOverlay.destroy();
+                });
+                
+                leaderboardContainer.add(closeButton);
+            })
+            .catch(error => {
+                console.error('Error fetching leaderboard:', error);
+                loadingText.setText('Error loading leaderboard. Please try again.');
+            });
     }
     
     cleanupNameInput() {
         // Remove the name input elements from the DOM
-        if (this.nameLabel && this.nameLabel.parentNode) {
-            this.nameLabel.parentNode.removeChild(this.nameLabel);
+        if (this.nameInputContainer && this.nameInputContainer.parentNode) {
+            this.nameInputContainer.parentNode.removeChild(this.nameInputContainer);
+            this.nameInputContainer = null; // Clear the reference
         }
         
-        if (this.nameInput && this.nameInput.parentNode) {
-            this.nameInput.parentNode.removeChild(this.nameInput);
-        }
+        // Also check for any orphaned elements with this ID
+        const existingInputs = document.querySelectorAll('#player-name-input');
+        existingInputs.forEach(input => {
+            if (input.parentNode) {
+                input.parentNode.removeChild(input);
+            }
+        });
     }
     
     saveHighScore() {
