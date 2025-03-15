@@ -1,6 +1,7 @@
 import { Scene } from 'phaser';
 import ThreeJSManager from '../utils/ThreeJSManager.js';
 import Player from '../entities/Player.js';
+import Enemy from '../entities/Enemy.js';
 
 export default class GameplayScene extends Scene {
     constructor() {
@@ -9,6 +10,9 @@ export default class GameplayScene extends Scene {
         this.background = null;
         this.player = null;
         this.isPointerDown = false;
+        this.enemies = [];
+        this.lastEnemySpawn = 0;
+        this.enemySpawnInterval = 3000; // Spawn enemy every 3 seconds
     }
 
     preload() {
@@ -63,7 +67,14 @@ export default class GameplayScene extends Scene {
         console.log('Canvas position:', rect.left, rect.top, rect.width, rect.height);
     }
 
-    update() {
+    spawnEnemy() {
+        // Random x position between -300 and 300 (in Three.js coordinates)
+        const x = (Math.random() * 600) - 300;
+        const enemy = new Enemy(this, this.threeJSManager, x);
+        this.enemies.push(enemy);
+    }
+
+    update(time) {
         // Scroll the background
         this.background.tilePositionY -= 2;
 
@@ -76,9 +87,28 @@ export default class GameplayScene extends Scene {
         if (this.player) {
             this.player.update(this.input.activePointer);
         }
+
+        // Spawn enemies
+        if (time - this.lastEnemySpawn >= this.enemySpawnInterval) {
+            this.spawnEnemy();
+            this.lastEnemySpawn = time;
+        }
+
+        // Update enemies and remove those that are off screen
+        this.enemies = this.enemies.filter(enemy => {
+            const isAlive = enemy.update(time);
+            if (!isAlive) {
+                enemy.destroy();
+            }
+            return isAlive;
+        });
     }
 
     destroy() {
+        // Clean up enemies
+        this.enemies.forEach(enemy => enemy.destroy());
+        this.enemies = [];
+
         if (this.player) {
             this.player.destroy();
             this.player = null;

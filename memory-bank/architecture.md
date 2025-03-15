@@ -190,3 +190,32 @@ Coordinate conversion formulas:
 - Phaser to Three.js:
   - X = phaser.x - 400
   - Y = -(phaser.y - 300)
+
+### Enemy System
+
+#### Enemy Class (`src/entities/Enemy.js`)
+The `Enemy` class represents hostile entities in the game with the following responsibilities:
+- Creates and manages a 3D model representation using Three.js
+- Maintains a physics body for collision detection using Phaser's physics system
+- Handles autonomous movement (downward scrolling)
+- Manages periodic shooting behavior
+- Provides cleanup methods for proper resource management
+
+Key components:
+- `model`: Three.js mesh representing the enemy in 3D space
+- `body`: Invisible Phaser sprite for physics calculations
+- `shootInterval`: Time between enemy shots (2000ms)
+- `speed`: Movement speed for downward scrolling
+
+#### Enemy Integration in GameplayScene
+The `GameplayScene` manages the enemy system through:
+- `enemies`: Array tracking all active enemy instances
+- `lastEnemySpawn`: Timestamp of last enemy spawn
+- `enemySpawnInterval`: Time between enemy spawns (3000ms)
+- `spawnEnemy()`: Creates new enemies at random x-coordinates
+- Enemy lifecycle management in the `update()` loop
+
+Coordinate System Integration:
+- Three.js coordinates: Centered at (0,0), range: (-300 to 300, -300 to 300)
+- Phaser coordinates: Top-left origin (0,0), range: (0 to 800, 0 to 600)
+- Conversion handled in Enemy class for seamless integration

@@ -150,6 +150,19 @@ Technical Details:
 - Set up Three.js with transparent background (alpha: true) to overlay Phaser canvas
 - Configured proper ES module imports for both Phaser and Three.js
 
+## Step 10: Basic Enemies Implementation - Completed
+- Created `Enemy` class in `src/entities/Enemy.js`
+  - Implemented basic 3D model using red cube placeholder
+  - Added physics body for future collision detection
+  - Set up periodic shooting mechanism (every 2 seconds)
+  - Implemented downward movement and cleanup logic
+- Updated `GameplayScene` to manage enemies:
+  - Added enemy spawning system (every 3 seconds)
+  - Implemented enemy lifecycle management
+  - Added cleanup for off-screen enemies
+  - Set up proper scene destruction handling
+- Successfully tested enemy spawning, movement, and shooting mechanics
+
 # Development Progress
 
 ## Step 9: Automatic Shooting Implementation - Completed
