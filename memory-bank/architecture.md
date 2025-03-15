@@ -414,3 +414,103 @@ The authentication UI is implemented using DOM elements that overlay the Phaser 
   - Status messages provide feedback on authentication progress
 
 This architecture provides a clean separation of concerns, with Firebase-specific code isolated in the FirebaseManager service, while the game scenes focus on UI presentation and game logic.
+
+### High Score System
+
+The game implements a persistent high score system using Firebase Realtime Database with the following architecture:
+
+#### Data Structure
+- **Path**: `users/{userId}/highScore`
+- **Additional Data**: `lastPlayed` timestamp for tracking when scores were achieved
+- **Schema**:
+  ```
+  users/
+    {userId}/
+      highScore: number
+      lastPlayed: ISO timestamp string
+  ```
+
+#### Core Components
+
+1. **FirebaseManager High Score Services**
+   - `saveHighScore(userId, score)`: Saves a score to Firebase if it's higher than the existing score
+   - `getHighScore(userId)`: Retrieves a user's high score from Firebase
+   - Both methods implement proper error handling and validation
+
+2. **Score Persistence Flow**
+   - **Recording**: When a game ends in GameplayScene, the current score is compared with the stored high score
+   - **Validation**: Scores are only updated if they exceed the previous high score
+   - **Storage**: Scores are stored with a timestamp for future analytics possibilities
+
+3. **Score Retrieval Flow**
+   - **Timing**: High scores are retrieved immediately after successful authentication
+   - **Display**: Scores are shown in the MainMenuScene below the play button
+   - **Styling**: Consistent visual styling with the rest of the UI
+
+#### Integration Points
+
+1. **GameplayScene Integration**
+   - `saveHighScore()`: Called during the game over sequence
+   - Uses the player's authenticated user ID to associate scores with accounts
+   - Provides feedback through console logs about score saving status
+
+2. **MainMenuScene Integration**
+   - `displayHighScore(userId)`: Retrieves and displays the user's high score
+   - Called after successful authentication
+   - Manages the high score text object lifecycle
+
+#### Technical Implementation
+
+The high score system uses an optimized approach to minimize database operations:
+- **Read Once**: High scores are read once after login
+- **Conditional Writes**: Database is only updated when a new high score is achieved
+- **Atomic Operations**: Uses Firebase's update operation for reliable updates
+- **Error Handling**: Comprehensive error handling for network issues or database unavailability
+
+This architecture ensures that high scores are reliably stored and retrieved while minimizing database operations and providing a seamless user experience.
+
+### Leaderboard System
+
+The game implements a global leaderboard system that allows players to compare their scores with others:
+
+#### Data Structure
+- Uses the same data structure as the high score system
+- Retrieves scores from all users, sorted by score value
+- Displays player names and scores in descending order
+
+#### Core Components
+
+1. **FirebaseManager Leaderboard Services**
+   - `getLeaderboard(limit)`: Retrieves top scores from all users
+   - Uses Firebase's query capabilities to sort and limit results
+   - Handles data formatting and user display names
+
+2. **LeaderboardScene**
+   - Dedicated scene for displaying the global leaderboard
+   - Fetches and displays top player scores
+   - Provides visual styling with medals for top performers
+   - Includes navigation back to the main menu
+
+3. **Integration Points**
+   - **MainMenuScene**: Adds a leaderboard button for direct access
+   - **GameplayScene**: Adds leaderboard access from victory screen
+   - **Victory Condition**: Game ends when player reaches 100 points
+
+#### Technical Implementation
+
+1. **Leaderboard Retrieval**
+   - Uses Firebase's `orderByChild` and `limitToLast` for efficient queries
+   - Implements client-side sorting for proper descending order
+   - Handles empty results and loading states
+
+2. **User Display Names**
+   - Uses display name if available, falls back to email or "Anonymous"
+   - Implements name truncation for consistent UI layout
+   - Provides visual distinction for top 3 players with medal emojis
+
+3. **Victory Condition**
+   - Monitors player score during gameplay
+   - Triggers victory screen when score reaches 100 points
+   - Saves high score and provides leaderboard access
+
+This leaderboard system enhances the game's replayability by adding a competitive element and providing players with goals to achieve beyond the basic gameplay.

@@ -327,3 +327,128 @@ Ready to proceed with Step 13: Integrate Firebase Authentication
 
 ### Next Steps:
 Ready to proceed with Step 14: Save High Scores to Firebase
+
+## Step 14: Save High Scores to Firebase ✅
+**Completed on:** March 15, 2024
+**Validated on:** March 15, 2024
+
+### What we did:
+1. Enhanced FirebaseManager with high score functionality:
+   - Added `saveHighScore(userId, score)` method to save scores to Firebase Realtime Database
+   - Implemented score comparison logic to only update when new score is higher
+   - Added `getHighScore(userId)` method to retrieve user's high score
+   - Added proper error handling and validation
+
+2. Updated GameplayScene to use the new high score system:
+   - Refactored `saveHighScore()` method to use FirebaseManager's implementation
+   - Added score comparison feedback in console logs
+   - Ensured high scores are saved when the game ends
+
+3. Enhanced MainMenuScene with high score display:
+   - Added `displayHighScore(userId)` method to retrieve and show the user's high score
+   - Implemented high score retrieval after successful login
+   - Added visual styling for high score display with proper positioning
+   - Implemented cleanup for high score text when needed
+
+4. Implemented data structure for user scores:
+   - Stored high scores under `users/{userId}/highScore` path
+   - Added timestamp tracking with `lastPlayed` field
+   - Ensured proper data validation and error handling
+
+### Technical Implementation:
+- Firebase Realtime Database:
+  - Used proper reference paths for user data
+  - Implemented optimized read/write operations
+  - Added data validation and error handling
+- Asynchronous Operations:
+  - Used async/await pattern for clean code
+  - Implemented proper Promise chaining
+  - Added comprehensive error handling
+- UI Integration:
+  - Displayed high score with consistent styling
+  - Positioned high score display for visibility
+  - Added proper text cleanup to prevent memory leaks
+
+### Test Results:
+- ✅ High scores save correctly to Firebase
+- ✅ Only higher scores update the stored value
+- ✅ High scores display correctly after login
+- ✅ High score persists between game sessions
+- ✅ Proper error handling for network issues
+- ✅ Clean integration with existing authentication system
+
+### Next Steps:
+All steps in the implementation plan have been completed. The game now has:
+- Core gameplay mechanics with 3D visuals
+- Player movement and shooting
+- Enemy spawning and AI
+- Collision detection and scoring
+- Firebase authentication and high score persistence
+
+Future enhancements could include:
+1. Multiple enemy types with different behaviors
+2. Power-ups and special weapons
+3. Level progression system
+4. Global leaderboard functionality
+5. Enhanced visual effects and audio
+6. Mobile-specific optimizations
+
+## Feature Enhancement: Leaderboard and Victory Condition ✅
+**Completed on:** March 15, 2024
+**Validated on:** March 15, 2024
+
+### What we did:
+1. Implemented victory condition:
+   - Added score threshold of 100 points to trigger victory
+   - Created victory screen with congratulatory message
+   - Added buttons for replay, main menu, and leaderboard access
+   - Ensured high scores are saved on victory
+
+2. Created global leaderboard system:
+   - Added `getLeaderboard()` method to FirebaseManager
+   - Implemented sorting and limiting of leaderboard entries
+   - Added display name support for better player identification
+   - Created visual styling with medals for top performers
+
+3. Added LeaderboardScene:
+   - Implemented dedicated scene for leaderboard display
+   - Created loading state with proper error handling
+   - Added player ranking with visual distinction for top players
+   - Implemented navigation back to main menu
+
+4. Enhanced UI integration:
+   - Added leaderboard button to MainMenuScene
+   - Added leaderboard access from victory screen
+   - Ensured consistent styling across all UI elements
+   - Implemented proper scene transitions
+
+### Technical Implementation:
+- Firebase Realtime Database:
+  - Used `orderByChild` and `limitToLast` for efficient queries
+  - Implemented client-side sorting for proper display order
+  - Added fallback for missing display names
+- Scene Management:
+  - Added LeaderboardScene to the scene registry
+  - Implemented proper scene transitions
+  - Ensured resource cleanup during scene changes
+- Victory Condition:
+  - Added score monitoring in the player-enemy collision handler
+  - Implemented victory screen with proper UI elements
+  - Added high score saving on victory
+
+### Test Results:
+- ✅ Game ends when player reaches 100 points
+- ✅ Victory screen displays with proper messaging
+- ✅ High scores save correctly on victory
+- ✅ Leaderboard displays top scores in descending order
+- ✅ Leaderboard shows proper player names with medals for top performers
+- ✅ Navigation between scenes works correctly
+- ✅ UI elements are consistent across all scenes
+
+### Next Steps:
+With the leaderboard and victory condition implemented, the game now has a complete gameplay loop with competitive elements. Future enhancements could focus on:
+1. Multiple game difficulty levels
+2. Additional enemy types and behaviors
+3. Power-up system for gameplay variety
+4. Enhanced visual effects and audio
+5. Mobile-specific control optimizations

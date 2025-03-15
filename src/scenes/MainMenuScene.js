@@ -274,11 +274,65 @@ export default class MainMenuScene extends Phaser.Scene {
         if (this.loginForm) {
             this.loginForm.style.display = 'none';
         }
+        
+        // Retrieve and display high score
+        this.displayHighScore(user.uid);
+        
+        // Add leaderboard button
+        this.addLeaderboardButton();
+    }
+
+    async displayHighScore(userId) {
+        try {
+            const highScore = await firebaseManager.getHighScore(userId);
+            
+            // Remove existing high score text if it exists
+            if (this.highScoreText) {
+                this.highScoreText.destroy();
+            }
+            
+            // Display high score
+            this.highScoreText = this.add.text(400, 350, `High Score: ${highScore}`, {
+                font: '24px Arial',
+                fill: '#ffffff',
+                stroke: '#000000',
+                strokeThickness: 3
+            }).setOrigin(0.5);
+            
+        } catch (error) {
+            console.error('Error retrieving high score:', error);
+        }
     }
 
     updateLoginStatus() {
         if (this.statusText) {
             this.statusText.textContent = this.loginStatus;
         }
+    }
+
+    addLeaderboardButton() {
+        // Add leaderboard button
+        const leaderboardButton = this.add.text(400, 460, 'Leaderboard', {
+            font: '24px Arial',
+            fill: '#ffffff',
+            backgroundColor: '#4a4a4a',
+            padding: { x: 20, y: 10 }
+        })
+        .setOrigin(0.5)
+        .setInteractive();
+        
+        // Add hover effect
+        leaderboardButton.on('pointerover', () => {
+            leaderboardButton.setStyle({ fill: '#ff0' });
+        });
+        
+        leaderboardButton.on('pointerout', () => {
+            leaderboardButton.setStyle({ fill: '#ffffff' });
+        });
+        
+        // Add click handler
+        leaderboardButton.on('pointerdown', () => {
+            this.scene.start('LeaderboardScene');
+        });
     }
 } 
