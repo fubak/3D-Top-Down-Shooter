@@ -5,22 +5,36 @@ export default class ThreeJSManager {
         // Initialize Three.js components
         this.renderer = new THREE.WebGLRenderer({ alpha: true });
         this.renderer.setSize(800, 600);
+        
+        // Center the renderer to match Phaser's canvas
         this.renderer.domElement.style.position = 'absolute';
-        this.renderer.domElement.style.top = '0';
-        this.renderer.domElement.style.left = '0';
+        this.renderer.domElement.style.left = '50%';
+        this.renderer.domElement.style.top = '50%';
+        this.renderer.domElement.style.transform = 'translate(-50%, -50%)';
         document.body.appendChild(this.renderer.domElement);
 
         // Create scene and camera
         this.scene = new THREE.Scene();
-        this.camera = new THREE.PerspectiveCamera(75, 800 / 600, 0.1, 1000);
-        this.camera.position.z = 5;
+        // Use orthographic camera for 2D-like view
+        const aspectRatio = 800 / 600;
+        const viewSize = 600;
+        this.camera = new THREE.OrthographicCamera(
+            -viewSize * aspectRatio / 2,
+            viewSize * aspectRatio / 2,
+            viewSize / 2,
+            -viewSize / 2,
+            1,
+            2000
+        );
+        this.camera.position.z = 1000;
+        this.camera.lookAt(0, 0, 0);
 
         // Add some basic lighting
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
         this.scene.add(ambientLight);
 
         const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
-        directionalLight.position.set(0, 1, 0);
+        directionalLight.position.set(0, 1, 1000);
         this.scene.add(directionalLight);
     }
 
@@ -46,7 +60,12 @@ export default class ThreeJSManager {
     // Method to resize the renderer (for responsive design)
     resize(width, height) {
         this.renderer.setSize(width, height);
-        this.camera.aspect = width / height;
+        const aspectRatio = width / height;
+        const viewSize = 600;
+        this.camera.left = -viewSize * aspectRatio / 2;
+        this.camera.right = viewSize * aspectRatio / 2;
+        this.camera.top = viewSize / 2;
+        this.camera.bottom = -viewSize / 2;
         this.camera.updateProjectionMatrix();
     }
 
