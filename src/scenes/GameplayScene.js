@@ -2,6 +2,7 @@ import { Scene } from 'phaser';
 import ThreeJSManager from '../utils/ThreeJSManager.js';
 import Player from '../entities/Player.js';
 import Enemy from '../entities/Enemy.js';
+import firebaseManager from '../utils/FirebaseManager.js';
 
 export default class GameplayScene extends Scene {
     constructor() {
@@ -17,6 +18,9 @@ export default class GameplayScene extends Scene {
         this.playerHealth = 100; // Player health
         this.score = 0; // Initialize score
         this.scoreText = null; // Text object to display score
+        this.health = 100;
+        this.healthText = null;
+        this.currentUser = null;
     }
 
     preload() {
@@ -29,6 +33,14 @@ export default class GameplayScene extends Scene {
     }
 
     create() {
+        // Get current user
+        this.currentUser = firebaseManager.getCurrentUser();
+        if (!this.currentUser) {
+            console.warn('No authenticated user found, returning to main menu');
+            this.scene.start('MainMenuScene');
+            return;
+        }
+
         // Enable physics
         this.physics.world.setBounds(0, 0, 800, 600);
         
@@ -48,13 +60,30 @@ export default class GameplayScene extends Scene {
         });
 
         // Add score text
-        this.scoreText = this.add.text(16, 16, 'Score: 0', { 
-            fontSize: '24px', 
-            fill: '#ffffff',
-            fontFamily: 'Arial',
+        this.scoreText = this.add.text(16, 16, 'Score: 0', {
+            fontSize: '24px',
+            fill: '#FFFFFF',
             stroke: '#000000',
-            strokeThickness: 3
+            strokeThickness: 4
         });
+        
+        // Add health text
+        this.healthText = this.add.text(16, 50, 'Health: 100', {
+            fontSize: '24px',
+            fill: '#FFFFFF',
+            stroke: '#000000',
+            strokeThickness: 4
+        });
+        
+        // Add user info text
+        if (this.currentUser) {
+            this.add.text(16, 84, `User: ${this.currentUser.email}`, {
+                fontSize: '16px',
+                fill: '#FFFFFF',
+                stroke: '#000000',
+                strokeThickness: 3
+            });
+        }
 
         // Create an invisible rectangle for input handling
         const inputRect = this.add.rectangle(400, 300, 800, 600, 0x000000, 0);
@@ -185,15 +214,119 @@ export default class GameplayScene extends Scene {
         // Destroy the bullet
         bullet.destroy();
         
-        // Damage the player
-        this.playerHealth -= 10;
-        console.log('Player hit! Health:', this.playerHealth);
+        // Reduce player health
+        this.health -= 10;
         
-        // Check if player is defeated
-        if (this.playerHealth <= 0) {
-            console.log('Player defeated!');
-            // For now, just log the defeat. In a full game, we would handle game over here.
+        // Update health text
+        if (this.healthText) {
+            this.healthText.setText(`Health: ${this.health}`);
         }
+        
+        // Check for game over
+        if (this.health <= 0) {
+            this.gameOver();
+        }
+    }
+
+    gameOver() {
+        console.log('Game Over!');
+        
+        // Save high score to Firebase if user is authenticated
+        if (this.currentUser && this.score > 0) {
+            this.saveHighScore();
+        }
+        
+        // Display game over text
+        this.add.text(400, 300, 'GAME OVER', {
+            fontSize: '64px',
+            fill: '#FF0000',
+            stroke: '#000000',
+            strokeThickness: 6
+        }).setOrigin(0.5);
+        
+        // Add restart button
+        const restartButton = this.add.text(400, 400, 'Play Again', {
+            fontSize: '32px',
+            fill: '#FFFFFF',
+            backgroundColor: '#4a4a4a',
+            padding: { x: 20, y: 10 }
+        })
+        .setOrigin(0.5)
+        .setInteractive();
+        
+        // Add hover effect
+        restartButton.on('pointerover', () => {
+            restartButton.setStyle({ fill: '#ff0' });
+        });
+        
+        restartButton.on('pointerout', () => {
+            restartButton.setStyle({ fill: '#FFFFFF' });
+        });
+        
+        // Add click handler
+        restartButton.on('pointerdown', () => {
+            this.scene.restart();
+        });
+        
+        // Add main menu button
+        const menuButton = this.add.text(400, 470, 'Main Menu', {
+            fontSize: '32px',
+            fill: '#FFFFFF',
+            backgroundColor: '#4a4a4a',
+            padding: { x: 20, y: 10 }
+        })
+        .setOrigin(0.5)
+        .setInteractive();
+        
+        // Add hover effect
+        menuButton.on('pointerover', () => {
+            menuButton.setStyle({ fill: '#ff0' });
+        });
+        
+        menuButton.on('pointerout', () => {
+            menuButton.setStyle({ fill: '#FFFFFF' });
+        });
+        
+        // Add click handler
+        menuButton.on('pointerdown', () => {
+            this.scene.start('MainMenuScene');
+        });
+        
+        // Stop the game
+        this.scene.pause();
+    }
+    
+    saveHighScore() {
+        if (!this.currentUser || !firebaseManager.db) {
+            console.error('Cannot save score: User not authenticated or database not available');
+            return;
+        }
+        
+        const userId = this.currentUser.uid;
+        const userScoreRef = firebaseManager.db.ref(`users/${userId}`);
+        
+        // First get the current high score
+        userScoreRef.once('value')
+            .then((snapshot) => {
+                const userData = snapshot.val() || {};
+                const currentHighScore = userData.highScore || 0;
+                
+                // Only update if the new score is higher
+                if (this.score > currentHighScore) {
+                    return userScoreRef.update({
+                        highScore: this.score,
+                        lastPlayed: new Date().toISOString()
+                    });
+                }
+                
+                return Promise.resolve();
+            })
+            .then(() => {
+                console.log('High score saved successfully');
+            })
+            .catch((error) => {
+                console.error('Error saving high score:', error);
+            });
     }
 
     destroy() {

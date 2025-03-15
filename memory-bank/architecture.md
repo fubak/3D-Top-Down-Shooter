@@ -350,3 +350,67 @@ The game implements a straightforward scoring system that rewards players for de
   - High score tracking and persistence
 
 This scoring system provides immediate feedback to players about their performance and creates a measurable goal for gameplay sessions.
+
+### Firebase Integration
+
+The game integrates with Firebase to provide authentication and data persistence capabilities. This integration follows a service-oriented architecture pattern with the following components:
+
+#### FirebaseManager (`src/utils/FirebaseManager.js`)
+A singleton service class that encapsulates all Firebase-related functionality:
+
+- **Initialization**
+  - Configures and initializes Firebase with application credentials
+  - Sets up authentication and database services
+  - Initializes authentication providers (email/password and Google)
+
+- **Authentication Services**
+  - `authenticate(email, password)`: Handles email/password authentication
+  - `signInWithGoogle()`: Manages Google OAuth authentication flow
+  - `createAccount(email, password)`: Handles new user registration
+  - `signOut()`: Manages user logout process
+  - `getCurrentUser()`: Provides access to the currently authenticated user
+
+- **Database Services**
+  - Provides reference to Firebase Realtime Database
+  - Will be extended in Step 14 to handle high score persistence
+
+- **Error Handling**
+  - Implements comprehensive error handling for all Firebase operations
+  - Provides meaningful error messages for authentication failures
+  - Handles edge cases like missing Firebase SDK
+
+#### Authentication Flow
+
+1. **User Authentication**
+   - MainMenuScene presents login options (email/password or Google)
+   - User credentials are passed to FirebaseManager
+   - Authentication result is returned to MainMenuScene
+   - UI updates based on authentication success/failure
+
+2. **Session Management**
+   - Firebase handles session persistence automatically
+   - Application checks for existing session on startup
+   - User remains logged in across page refreshes
+
+3. **Security**
+   - Authentication is required to access the game
+   - Play button is disabled until successful authentication
+   - GameplayScene verifies authentication before allowing play
+
+#### UI Integration
+
+The authentication UI is implemented using DOM elements that overlay the Phaser canvas:
+
+- **Login Form**
+  - Created dynamically in MainMenuScene
+  - Positioned absolutely over the game canvas
+  - Styled for consistency with game aesthetics
+  - Includes email/password fields and authentication buttons
+
+- **Form Management**
+  - Form elements are created on scene initialization
+  - Event listeners handle user interactions
+  - Form is properly removed during scene transitions
+  - Status messages provide feedback on authentication progress
+
+This architecture provides a clean separation of concerns, with Firebase-specific code isolated in the FirebaseManager service, while the game scenes focus on UI presentation and game logic.
