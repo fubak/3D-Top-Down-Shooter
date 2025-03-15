@@ -146,3 +146,47 @@ The game's scene configuration is managed in `src/main.js`:
 - Registers all game scenes
 - Configures physics system
 - Sets up display properties (800x600 resolution)
+
+# Game Architecture
+
+## File Structure and Responsibilities
+
+### src/entities/Player.js
+- Manages the player ship's 3D model using Three.js
+- Handles player movement with pointer input
+- Controls the automatic shooting system:
+  - Manages bullet group using Phaser's physics system
+  - Handles bullet creation and cleanup
+  - Converts coordinates between Three.js and Phaser coordinate systems
+- Maintains boundaries for player movement
+
+### src/scenes/GameplayScene.js
+- Main game scene implementation
+- Manages game state and updates
+- Creates and manages the scrolling background
+- Initializes the physics system
+- Handles input events for player control
+- Generates and manages game assets (e.g., bullet sprites)
+- Coordinates updates between Phaser and Three.js systems
+
+### Coordinate Systems
+The game uses two different coordinate systems that need to be carefully managed:
+1. Three.js (3D World)
+   - Center origin (0,0)
+   - X: -400 to +400
+   - Y: -300 to +300 (positive is up)
+   - Used for player ship model
+
+2. Phaser (2D World)
+   - Top-left origin (0,0)
+   - X: 0 to 800
+   - Y: 0 to 600 (positive is down)
+   - Used for bullets and UI elements
+
+Coordinate conversion formulas:
+- Three.js to Phaser:
+  - X = threeJS.x + 400
+  - Y = -threeJS.y + 300
+- Phaser to Three.js:
+  - X = phaser.x - 400
+  - Y = -(phaser.y - 300)

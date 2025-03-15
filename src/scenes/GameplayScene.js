@@ -11,7 +11,19 @@ export default class GameplayScene extends Scene {
         this.isPointerDown = false;
     }
 
+    preload() {
+        // Create a simple bullet sprite if it doesn't exist
+        const graphics = this.add.graphics();
+        graphics.fillStyle(0xffff00, 1); // Yellow color
+        graphics.fillCircle(4, 4, 4);
+        graphics.generateTexture('bullet', 8, 8);
+        graphics.destroy();
+    }
+
     create() {
+        // Enable physics
+        this.physics.world.setBounds(0, 0, 800, 600);
+        
         // Add the scrolling background as a tile sprite
         this.background = this.add.tileSprite(400, 300, 800, 600, 'background');
         
@@ -58,6 +70,11 @@ export default class GameplayScene extends Scene {
         // Update Three.js scene
         if (this.threeJSManager) {
             this.threeJSManager.update();
+        }
+
+        // Update player (for continuous shooting)
+        if (this.player) {
+            this.player.update(this.input.activePointer);
         }
     }
 

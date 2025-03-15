@@ -149,3 +149,24 @@ Technical Details:
 - Implemented proper resource cleanup in GameplayScene's destroy method
 - Set up Three.js with transparent background (alpha: true) to overlay Phaser canvas
 - Configured proper ES module imports for both Phaser and Three.js
+
+# Development Progress
+
+## Step 9: Automatic Shooting Implementation - Completed
+- Added automatic shooting mechanics to the Player class
+  - Implemented bullet group using Phaser's physics system
+  - Set up shooting timer with 0.2-second delay between shots
+  - Added bullet cleanup for off-screen projectiles
+  - Implemented proper coordinate conversion between Three.js and Phaser for bullet spawning
+- Modified GameplayScene to support shooting mechanics
+  - Added bullet sprite generation using Phaser graphics
+  - Enabled continuous player updates for consistent shooting
+  - Configured physics world bounds
+- Technical Details:
+  - Bullet velocity: -400 pixels per second (upward)
+  - Bullet sprite: 8x8 yellow circle
+  - Shooting interval: 200ms
+  - Coordinate system handling:
+    - Three.js: Center origin (-400 to 400, -300 to 300)
+    - Phaser: Top-left origin (0 to 800, 0 to 600)
+    - Proper conversion implemented for accurate bullet spawning

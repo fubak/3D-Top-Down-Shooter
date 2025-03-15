@@ -12,6 +12,11 @@ export default class Player {
             y: { min: -300, max: 300 }
         };
         
+        // Add shooting properties
+        this.lastShootTime = 0;
+        this.shootDelay = 200; // 0.2 seconds between shots
+        this.bullets = this.scene.physics.add.group();
+        
         this.createTemporaryModel();
     }
 
@@ -63,7 +68,35 @@ export default class Player {
     }
 
     update(pointer) {
-        this.updatePosition(pointer);
+        // Only update position if pointer is down
+        if (this.scene.isPointerDown) {
+            this.updatePosition(pointer);
+        }
+        // Always try to shoot
+        this.shoot();
+    }
+
+    shoot() {
+        const currentTime = this.scene.time.now;
+        if (currentTime - this.lastShootTime >= this.shootDelay) {
+            // Convert Three.js coordinates back to Phaser coordinates
+            const phaserX = this.model.position.x + 400; // Center offset
+            const phaserY = -this.model.position.y + 300; // Center offset and flip Y
+            
+            // Create a bullet at the player's position
+            const bullet = this.bullets.create(phaserX, phaserY, 'bullet');
+            if (bullet) {
+                bullet.setVelocityY(-400);
+                this.lastShootTime = currentTime;
+            }
+        }
+
+        // Clean up bullets that are off screen
+        this.bullets.children.each((bullet) => {
+            if (bullet.y < -50) {
+                bullet.destroy();
+            }
+        });
     }
 
     destroy() {
