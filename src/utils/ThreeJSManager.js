@@ -1,14 +1,13 @@
+import * as THREE from 'three';
+
 export default class ThreeJSManager {
     constructor() {
-        // Initialize Three.js renderer with alpha for transparency
+        // Initialize Three.js components
         this.renderer = new THREE.WebGLRenderer({ alpha: true });
-        this.renderer.setSize(800, 600); // Match Phaser canvas size
-        
-        // Position the renderer's canvas absolutely over the Phaser canvas
+        this.renderer.setSize(800, 600);
         this.renderer.domElement.style.position = 'absolute';
-        this.renderer.domElement.style.top = '50%';
-        this.renderer.domElement.style.left = '50%';
-        this.renderer.domElement.style.transform = 'translate(-50%, -50%)';
+        this.renderer.domElement.style.top = '0';
+        this.renderer.domElement.style.left = '0';
         document.body.appendChild(this.renderer.domElement);
 
         // Create scene and camera
@@ -16,13 +15,12 @@ export default class ThreeJSManager {
         this.camera = new THREE.PerspectiveCamera(75, 800 / 600, 0.1, 1000);
         this.camera.position.z = 5;
 
-        // Add ambient light to the scene
+        // Add some basic lighting
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
         this.scene.add(ambientLight);
 
-        // Add directional light for better 3D definition
         const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
-        directionalLight.position.set(0, 1, 5);
+        directionalLight.position.set(0, 1, 0);
         this.scene.add(directionalLight);
     }
 
@@ -41,6 +39,7 @@ export default class ThreeJSManager {
 
     // Method to update the scene (called in game loop)
     update() {
+        // Render the scene
         this.renderer.render(this.scene, this.camera);
     }
 
@@ -61,9 +60,11 @@ export default class ThreeJSManager {
         this.scene.remove(object);
     }
 
-    // Method to clean up resources
-    dispose() {
-        this.renderer.dispose();
-        document.body.removeChild(this.renderer.domElement);
+    // Method to clean up Three.js resources when switching scenes
+    destroy() {
+        if (this.renderer) {
+            this.renderer.dispose();
+            document.body.removeChild(this.renderer.domElement);
+        }
     }
 } 

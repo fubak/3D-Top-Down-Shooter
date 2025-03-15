@@ -32,54 +32,31 @@ stellar-vanguard/
   - Entry point for game logic
 
 ### Scene Management
-- **BootScene.js**
-  - First scene to load in the game
-  - Will handle asset preloading (in next step)
-  - Currently displays loading indicator
-  - Will transition to MainMenuScene (to be implemented)
+The game uses Phaser's scene management system with three main scenes:
+- `BootScene`: Handles initial asset loading and displays loading progress
+- `MainMenuScene`: Displays the game title and play button with static background
+- `GameplayScene`: Main game scene with scrolling background and 3D overlay
 
-- **MainMenuScene.js**
-  - Primary responsibility: Main menu interface and game entry point
-  - Features:
-    - Displays game title and background
-    - Provides interactive play button with hover effects
-    - Manages scene transition to GameplayScene
-  - Implementation details:
-    - Uses loaded background asset from BootScene
-    - Implements responsive UI elements with proper centering
-    - Uses Phaser's text objects with interactive capabilities
-    - Follows clean code practices with modular event handling
-    - Maintains separation of concerns between UI and logic
+### Utility Classes
 
-### Three.js Integration
-- **ThreeJSManager.js**
-  - Primary responsibility: Manages 3D rendering and integration with Phaser
-  - Features:
-    - WebGL renderer with alpha channel for transparency
-    - Scene and camera management
-    - 3D model loading via GLTFLoader
-    - Lighting system with ambient and directional lights
-  - Implementation details:
-    - Canvas positioning for proper overlay with Phaser
-    - Resource management and cleanup
-    - Responsive design support
-    - Utility methods for scene object manipulation
+#### ThreeJSManager (`src/utils/ThreeJSManager.js`)
+Manages the 3D rendering layer of the game:
+- Creates and manages WebGL renderer with transparent background
+- Sets up 3D scene, camera, and lighting
+- Handles model loading (prepared for future steps)
+- Provides methods for scene manipulation (add/remove objects)
+- Implements proper resource cleanup
+- Key methods:
+  - `constructor()`: Sets up renderer, scene, camera, and lights
+  - `update()`: Renders the current frame
+  - `destroy()`: Cleans up resources
+  - `loadModel()`: Async method for loading 3D models (to be used in Step 8)
 
 ### Technical Integration
-- **Renderer Layering**
-  - Three.js canvas positioned absolutely over Phaser canvas
-  - Alpha channel enabled for transparent background
-  - Proper z-index management for layer visibility
-
-- **Resource Management**
-  - Efficient model loading with GLTFLoader
-  - Proper cleanup of 3D resources
-  - Memory management best practices
-
-- **Performance Optimization**
-  - Shared WebGL context considerations
-  - Efficient render loop integration
-  - Resource disposal patterns
+- **Layered Rendering**: Uses Phaser for 2D elements (UI, background) and Three.js for 3D elements
+- **Canvas Stacking**: Three.js canvas is positioned absolutely over Phaser's canvas
+- **Module System**: Uses ES6 modules with import maps for clean dependency management
+- **Resource Management**: Implements proper cleanup to prevent memory leaks during scene transitions
 
 ## Technical Decisions
 
@@ -143,6 +120,19 @@ The game uses Phaser's scene management system with the following structure:
   - Uses Phaser's text objects with interactive capabilities
   - Follows clean code practices with modular event handling
   - Maintains separation of concerns between UI and logic
+
+### GameplayScene (`src/scenes/GameplayScene.js`)
+- Primary responsibility: Main gameplay rendering and logic
+- Features:
+  - Hybrid rendering system combining Phaser 2D and Three.js 3D
+  - Background layer management
+  - Integration with ThreeJSManager for 3D elements
+- Implementation details:
+  - Uses Phaser's Scene system for lifecycle management
+  - Implements continuous update loop for 3D rendering
+  - Maintains proper layering between 2D and 3D elements
+  - Follows component-based architecture for extensibility
+  - Implements null safety checks for ThreeJSManager
 
 ## Asset Management
 - Assets are organized in the `assets/` directory:
