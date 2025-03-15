@@ -56,6 +56,9 @@ export default class MainMenuScene extends Phaser.Scene {
             }
         });
 
+        // Add leaderboard button
+        this.addLeaderboardButton();
+
         // Check if user is already logged in
         const currentUser = firebaseManager.getCurrentUser();
         if (currentUser) {
@@ -264,43 +267,43 @@ export default class MainMenuScene extends Phaser.Scene {
 
     handleLoginSuccess(user) {
         this.isLoggedIn = true;
-        this.loginStatus = `Logged in as ${user.email}`;
+        
+        // Update login status
+        const displayName = user.displayName || user.email || 'Player';
+        this.loginStatus = `Logged in as ${displayName}`;
         this.updateLoginStatus();
         
         // Enable play button
-        this.playButton.setStyle({ fill: '#ffffff' });
+        this.playButton.setStyle({ fill: '#ffffff', backgroundColor: '#4CAF50' });
         
         // Hide login form
         if (this.loginForm) {
             this.loginForm.style.display = 'none';
         }
         
-        // Retrieve and display high score
-        this.displayHighScore(user.uid);
+        // Add logout button
+        this.addLogoutButton();
         
-        // Add leaderboard button
-        this.addLeaderboardButton();
+        // Display high score if available
+        this.displayHighScore(user.uid);
     }
 
     async displayHighScore(userId) {
         try {
             const highScore = await firebaseManager.getHighScore(userId);
-            
-            // Remove existing high score text if it exists
-            if (this.highScoreText) {
-                this.highScoreText.destroy();
+            if (highScore) {
+                // Create or update high score text
+                if (this.highScoreText) {
+                    this.highScoreText.setText(`Your High Score: ${highScore}`);
+                } else {
+                    this.highScoreText = this.add.text(400, 450, `Your High Score: ${highScore}`, {
+                        font: '24px Arial',
+                        fill: '#ffffff'
+                    }).setOrigin(0.5);
+                }
             }
-            
-            // Display high score
-            this.highScoreText = this.add.text(400, 350, `High Score: ${highScore}`, {
-                font: '24px Arial',
-                fill: '#ffffff',
-                stroke: '#000000',
-                strokeThickness: 3
-            }).setOrigin(0.5);
-            
         } catch (error) {
-            console.error('Error retrieving high score:', error);
+            console.error("Error getting high score:", error);
         }
     }
 
@@ -312,27 +315,93 @@ export default class MainMenuScene extends Phaser.Scene {
 
     addLeaderboardButton() {
         // Add leaderboard button
-        const leaderboardButton = this.add.text(400, 460, 'Leaderboard', {
+        this.leaderboardButton = this.add.text(400, 500, 'Leaderboard', {
             font: '24px Arial',
             fill: '#ffffff',
-            backgroundColor: '#4a4a4a',
-            padding: { x: 20, y: 10 }
+            backgroundColor: '#333333',
+            padding: { x: 15, y: 8 }
         })
         .setOrigin(0.5)
         .setInteractive();
-        
+
         // Add hover effect
-        leaderboardButton.on('pointerover', () => {
-            leaderboardButton.setStyle({ fill: '#ff0' });
+        this.leaderboardButton.on('pointerover', () => {
+            this.leaderboardButton.setStyle({ fill: '#ff0' });
         });
-        
-        leaderboardButton.on('pointerout', () => {
-            leaderboardButton.setStyle({ fill: '#ffffff' });
+
+        this.leaderboardButton.on('pointerout', () => {
+            this.leaderboardButton.setStyle({ fill: '#ffffff' });
         });
-        
+
         // Add click handler
-        leaderboardButton.on('pointerdown', () => {
+        this.leaderboardButton.on('pointerdown', () => {
             this.scene.start('LeaderboardScene');
         });
+    }
+
+    addLogoutButton() {
+        // Remove existing logout button if it exists
+        if (this.logoutButton) {
+            this.logoutButton.destroy();
+        }
+        
+        // Add logout button
+        this.logoutButton = this.add.text(700, 50, 'Logout', {
+            font: '20px Arial',
+            fill: '#ffffff',
+            backgroundColor: '#d32f2f',
+            padding: { x: 10, y: 5 }
+        })
+        .setOrigin(0.5)
+        .setInteractive();
+
+        // Add hover effect
+        this.logoutButton.on('pointerover', () => {
+            this.logoutButton.setStyle({ fill: '#ffcccc' });
+        });
+
+        this.logoutButton.on('pointerout', () => {
+            this.logoutButton.setStyle({ fill: '#ffffff' });
+        });
+
+        // Add click handler
+        this.logoutButton.on('pointerdown', () => {
+            this.handleLogout();
+        });
+    }
+    
+    async handleLogout() {
+        try {
+            await firebaseManager.signOut();
+            
+            // Reset login state
+            this.isLoggedIn = false;
+            this.loginStatus = 'Logged out successfully';
+            this.updateLoginStatus();
+            
+            // Disable play button
+            this.playButton.setStyle({ fill: '#888888', backgroundColor: '#4a4a4a' });
+            
+            // Show login form
+            if (this.loginForm) {
+                this.loginForm.style.display = 'flex';
+            }
+            
+            // Remove logout button
+            if (this.logoutButton) {
+                this.logoutButton.destroy();
+                this.logoutButton = null;
+            }
+            
+            // Remove high score text
+            if (this.highScoreText) {
+                this.highScoreText.destroy();
+                this.highScoreText = null;
+            }
+            
+        } catch (error) {
+            this.loginStatus = `Logout failed: ${error.message}`;
+            this.updateLoginStatus();
+        }
     }
 } 
