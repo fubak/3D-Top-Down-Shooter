@@ -231,6 +231,50 @@ class FirebaseManager {
             return Promise.reject(error);
         }
     }
+
+    /**
+     * Save high score to Firebase with custom display name
+     * @param {string} userId - User ID
+     * @param {number} score - Score to save
+     * @param {string} displayName - User's display name
+     * @returns {Promise} - Save result
+     */
+    async saveHighScoreWithName(userId, score, displayName) {
+        if (!this.db) {
+            return Promise.reject(new Error("Firebase database not available"));
+        }
+
+        try {
+            const userRef = this.db.ref(`users/${userId}`);
+            
+            // Get current high score
+            const snapshot = await userRef.once('value');
+            const userData = snapshot.val() || {};
+            const currentHighScore = userData.highScore || 0;
+            
+            // Only update if new score is higher
+            if (score > currentHighScore) {
+                await userRef.update({
+                    highScore: score,
+                    displayName: displayName,
+                    lastPlayed: new Date().toISOString()
+                });
+                console.log(`High score updated: ${score} for ${displayName}`);
+                return true;
+            } else {
+                // Even if score isn't higher, update the display name
+                await userRef.update({
+                    displayName: displayName,
+                    lastPlayed: new Date().toISOString()
+                });
+                console.log(`Display name updated to ${displayName}, but score not high enough to update: ${score} <= ${currentHighScore}`);
+                return false;
+            }
+        } catch (error) {
+            console.error("Error saving high score with name:", error);
+            return Promise.reject(error);
+        }
+    }
 }
 
 // Export as singleton

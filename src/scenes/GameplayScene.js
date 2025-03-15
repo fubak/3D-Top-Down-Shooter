@@ -519,11 +519,6 @@ export default class GameplayScene extends Scene {
     victory() {
         console.log('Victory!');
         
-        // Save high score to Firebase if user is authenticated
-        if (this.currentUser && this.score > 0) {
-            this.saveHighScore();
-        }
-        
         // Clean up game elements
         this.cleanupGameElements();
         
@@ -534,7 +529,7 @@ export default class GameplayScene extends Scene {
         const victoryContainer = this.add.container(0, 0);
         
         // Display victory text
-        victoryContainer.add(this.add.text(400, 200, 'VICTORY!', {
+        victoryContainer.add(this.add.text(400, 150, 'VICTORY!', {
             fontSize: '64px',
             fill: '#00FF00',
             stroke: '#000000',
@@ -542,15 +537,18 @@ export default class GameplayScene extends Scene {
         }).setOrigin(0.5));
         
         // Display score
-        victoryContainer.add(this.add.text(400, 280, `Final Score: ${this.score}`, {
+        victoryContainer.add(this.add.text(400, 220, `Final Score: ${this.score}`, {
             fontSize: '32px',
             fill: '#FFFFFF',
             stroke: '#000000',
             strokeThickness: 4
         }).setOrigin(0.5));
         
+        // Create name input field
+        this.createNameInput();
+        
         // Add leaderboard button
-        const leaderboardButton = this.add.text(400, 360, 'View Leaderboard', {
+        const leaderboardButton = this.add.text(400, 400, 'View Leaderboard', {
             fontSize: '32px',
             fill: '#FFFFFF',
             backgroundColor: '#4a4a4a',
@@ -574,7 +572,7 @@ export default class GameplayScene extends Scene {
         });
         
         // Add play again button
-        const restartButton = this.add.text(400, 430, 'Play Again', {
+        const restartButton = this.add.text(400, 470, 'Play Again', {
             fontSize: '32px',
             fill: '#FFFFFF',
             backgroundColor: '#4a4a4a',
@@ -594,11 +592,13 @@ export default class GameplayScene extends Scene {
         
         // Add click handler
         restartButton.on('pointerdown', () => {
+            this.saveHighScore();
+            this.cleanupNameInput();
             this.restartGame();
         });
         
         // Add main menu button
-        const menuButton = this.add.text(400, 500, 'Main Menu', {
+        const menuButton = this.add.text(400, 540, 'Main Menu', {
             fontSize: '32px',
             fill: '#FFFFFF',
             backgroundColor: '#4a4a4a',
@@ -618,6 +618,8 @@ export default class GameplayScene extends Scene {
         
         // Add click handler
         menuButton.on('pointerdown', () => {
+            this.saveHighScore();
+            this.cleanupNameInput();
             this.startMainMenu();
         });
         
@@ -628,7 +630,59 @@ export default class GameplayScene extends Scene {
         
         // Bring container to top to ensure buttons are clickable
         victoryContainer.setDepth(1000);
-        overlay.setDepth(999);
+    }
+    
+    createNameInput() {
+        // Create a label for the input field
+        const nameLabel = document.createElement('div');
+        nameLabel.textContent = 'Enter your name for the leaderboard:';
+        nameLabel.style.position = 'absolute';
+        nameLabel.style.top = '280px';
+        nameLabel.style.left = '50%';
+        nameLabel.style.transform = 'translateX(-50%)';
+        nameLabel.style.color = 'white';
+        nameLabel.style.fontFamily = 'Arial';
+        nameLabel.style.fontSize = '20px';
+        nameLabel.style.textAlign = 'center';
+        
+        // Create the input field
+        const nameInput = document.createElement('input');
+        nameInput.type = 'text';
+        nameInput.id = 'player-name-input';
+        nameInput.style.position = 'absolute';
+        nameInput.style.top = '320px';
+        nameInput.style.left = '50%';
+        nameInput.style.transform = 'translateX(-50%)';
+        nameInput.style.width = '300px';
+        nameInput.style.padding = '10px';
+        nameInput.style.fontSize = '18px';
+        nameInput.style.borderRadius = '5px';
+        nameInput.style.border = '2px solid #4CAF50';
+        nameInput.style.textAlign = 'center';
+        
+        // Set default value to current user's display name or email if available
+        if (this.currentUser) {
+            nameInput.value = this.currentUser.displayName || this.currentUser.email || '';
+        }
+        
+        // Add elements to the DOM
+        document.body.appendChild(nameLabel);
+        document.body.appendChild(nameInput);
+        
+        // Store references for cleanup
+        this.nameLabel = nameLabel;
+        this.nameInput = nameInput;
+    }
+    
+    cleanupNameInput() {
+        // Remove the name input elements from the DOM
+        if (this.nameLabel && this.nameLabel.parentNode) {
+            this.nameLabel.parentNode.removeChild(this.nameLabel);
+        }
+        
+        if (this.nameInput && this.nameInput.parentNode) {
+            this.nameInput.parentNode.removeChild(this.nameInput);
+        }
     }
     
     saveHighScore() {
@@ -639,8 +693,14 @@ export default class GameplayScene extends Scene {
         
         const userId = this.currentUser.uid;
         
-        // Use the FirebaseManager's saveHighScore method
-        firebaseManager.saveHighScore(userId, this.score)
+        // Get the player name from the input field
+        let displayName = 'Anonymous';
+        if (this.nameInput && this.nameInput.value.trim()) {
+            displayName = this.nameInput.value.trim();
+        }
+        
+        // Use the FirebaseManager's saveHighScore method with the display name
+        firebaseManager.saveHighScoreWithName(userId, this.score, displayName)
             .then((updated) => {
                 if (updated) {
                     console.log('High score updated successfully');
