@@ -15,6 +15,8 @@ export default class GameplayScene extends Scene {
         this.enemySpawnInterval = 3000; // Spawn enemy every 3 seconds
         this.enemyBullets = null; // Group for enemy bullets
         this.playerHealth = 100; // Player health
+        this.score = 0; // Initialize score
+        this.scoreText = null; // Text object to display score
     }
 
     preload() {
@@ -43,6 +45,15 @@ export default class GameplayScene extends Scene {
         this.enemyBullets = this.physics.add.group({
             allowGravity: false,
             velocityY: 300
+        });
+
+        // Add score text
+        this.scoreText = this.add.text(16, 16, 'Score: 0', { 
+            fontSize: '24px', 
+            fill: '#ffffff',
+            fontFamily: 'Arial',
+            stroke: '#000000',
+            strokeThickness: 3
         });
 
         // Create an invisible rectangle for input handling
@@ -160,6 +171,13 @@ export default class GameplayScene extends Scene {
             this.enemies.splice(index, 1);
             enemy.destroy();
             console.log('Enemy destroyed by player bullet');
+            
+            // Increment score
+            this.score += 10;
+            // Update score text
+            if (this.scoreText) {
+                this.scoreText.setText('Score: ' + this.score);
+            }
         }
     }
 

@@ -240,3 +240,33 @@ Technical Details:
 
 ### Next Steps:
 Ready to proceed with Step 12: Add Scoring System
+
+## Step 12: Add Scoring System ✅
+**Completed on:** March 15, 2024
+**Validated on:** March 15, 2024
+
+### What we did:
+1. Implemented scoring system in GameplayScene:
+   - Added score variable initialized to 0 in constructor
+   - Created scoreText display in the top-left corner of the screen
+   - Added score increment logic in handlePlayerBulletEnemyCollision method
+   - Set score increment value to 10 points per enemy destroyed
+
+2. Enhanced UI presentation:
+   - Used contrasting text colors for better visibility (white text with black outline)
+   - Positioned score display at coordinates (16, 16) for clear visibility
+   - Used appropriate font size (24px) for readability during gameplay
+
+3. Added null checks for robustness:
+   - Verified scoreText exists before updating
+   - Ensured score updates only when enemy is successfully destroyed
+
+### Test Results:
+- ✅ Score initializes to 0 at game start
+- ✅ Score increases by 10 points when an enemy is destroyed
+- ✅ Score display updates in real-time
+- ✅ Text remains visible against changing background
+- ✅ Score persists correctly throughout gameplay
+
+### Next Steps:
+Ready to proceed with Step 13: Integrate Firebase Authentication

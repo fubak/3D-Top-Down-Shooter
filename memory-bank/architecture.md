@@ -320,3 +320,33 @@ The collision system integrates with a simple health system:
 - Each enemy bullet hit reduces health by 10 points
 - Game over condition triggered when health reaches 0
 - Currently logs game over state (to be expanded in future steps)
+
+### Scoring System
+
+The game implements a straightforward scoring system that rewards players for destroying enemy ships:
+
+#### Core Components
+- **Score Variable**: Maintained in GameplayScene as an integer value
+- **Score Display**: Text object positioned at the top-left corner of the screen
+- **Score Increment**: 10 points awarded for each enemy destroyed
+
+#### Implementation Details
+- **Initialization**: Score starts at 0 when GameplayScene is created
+- **Visual Representation**: 
+  - White text with black outline for visibility against any background
+  - 24px Arial font for clear readability during fast-paced gameplay
+  - Positioned at coordinates (16, 16) to avoid interfering with gameplay
+- **Update Mechanism**: 
+  - Score increments in the handlePlayerBulletEnemyCollision method
+  - Text display updates immediately after score changes
+  - Null checks ensure robustness if text object is not available
+
+#### Integration with Game Systems
+- **Enemy Destruction**: Score only increases when an enemy is successfully destroyed by player bullets
+- **Persistence**: Score maintains its value throughout the gameplay session
+- **Future Expansion**: The scoring system is designed to be easily extended for:
+  - Different point values for different enemy types
+  - Combo or multiplier systems
+  - High score tracking and persistence
+
+This scoring system provides immediate feedback to players about their performance and creates a measurable goal for gameplay sessions.
