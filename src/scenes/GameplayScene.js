@@ -60,36 +60,22 @@ export default class GameplayScene extends Scene {
             this.threeManager = new ThreeJSManager(this.game.canvas);
             this.debugLog("ThreeJSManager initialized");
             
-            // Create a tiled background
-            this.background = this.add.tileSprite(
+            // Create a static background using the SeagullThor image
+            this.background = this.add.image(
                 this.cameras.main.width / 2,
                 this.cameras.main.height / 2,
-                this.cameras.main.width,
-                this.cameras.main.height,
                 'background'
             );
             
-            // If the background texture doesn't exist, create a simple one
-            if (!this.textures.exists('background')) {
-                const graphics = this.add.graphics();
-                graphics.fillGradientStyle(0x000033, 0x000033, 0x000066, 0x000066);
-                graphics.fillRect(0, 0, 256, 256);
-                
-                // Add some stars
-                for (let i = 0; i < 100; i++) {
-                    const x = Math.random() * 256;
-                    const y = Math.random() * 256;
-                    const size = Math.random() * 2 + 1;
-                    graphics.fillStyle(0xffffff, Math.random() * 0.5 + 0.5);
-                    graphics.fillCircle(x, y, size);
-                }
-                
-                graphics.generateTexture('background', 256, 256);
-                graphics.destroy();
-                
-                // Update the background with the new texture
-                this.background.setTexture('background');
-            }
+            // Maintain aspect ratio, fit width to canvas, and center vertically
+            const scaleX = this.cameras.main.width / this.background.width;
+            this.background.setScale(scaleX);
+            
+            // Center the image vertically
+            this.background.y = this.cameras.main.height / 2;
+            
+            // Create a scrolling starfield layer above the background
+            this.createStarfield();
             
             // Create player at the center bottom of the screen
             const centerX = this.cameras.main.width / 2;
@@ -208,6 +194,75 @@ export default class GameplayScene extends Scene {
         }
     }
 
+    createStarfield() {
+        try {
+            this.debugLog("Creating starfield");
+            
+            // Create a new graphics object for the starfield
+            const starfieldGraphics = this.add.graphics();
+            
+            // Create a texture for the starfield
+            starfieldGraphics.fillStyle(0x000000, 0); // Transparent background
+            starfieldGraphics.fillRect(0, 0, this.cameras.main.width, this.cameras.main.height);
+            
+            // Generate random stars with different sizes and brightness
+            // Reduce number of stars for less density
+            const numStars = 100; // Reduced from 200
+            
+            for (let i = 0; i < numStars; i++) {
+                const x = Math.random() * this.cameras.main.width;
+                const y = Math.random() * this.cameras.main.height;
+                
+                // Make stars smaller
+                const size = Math.random() * 1.2 + 0.3; // Smaller size range (0.3 to 1.5)
+                
+                // More varied brightness with some very dim stars for realism
+                const brightness = Math.random() * Math.random() * 0.7 + 0.3; // Non-linear distribution favoring dimmer stars
+                
+                // More realistic star colors (mostly white/blue with occasional yellow/red for distant stars)
+                // Realistic space colors with proper distribution
+                let color;
+                const colorRoll = Math.random();
+                if (colorRoll < 0.7) {
+                    // Majority are white to slightly blue-white (main sequence stars)
+                    color = 0xf8f8ff; // White with slight blue tint
+                } else if (colorRoll < 0.85) {
+                    // Some are slightly yellow (G-type stars like our sun)
+                    color = 0xfff8e0;
+                } else if (colorRoll < 0.95) {
+                    // Few are blue (hot, young stars)
+                    color = 0xe0e8ff;
+                } else {
+                    // Very few are reddish (red giants, distant stars)
+                    color = 0xffe0e0;
+                }
+                
+                starfieldGraphics.fillStyle(color, brightness);
+                starfieldGraphics.fillCircle(x, y, size);
+            }
+            
+            // Generate the texture
+            starfieldGraphics.generateTexture('starfield', this.cameras.main.width, this.cameras.main.height);
+            starfieldGraphics.destroy();
+            
+            // Create a tileSprite using the generated texture
+            this.starfield = this.add.tileSprite(
+                this.cameras.main.width / 2,
+                this.cameras.main.height / 2,
+                this.cameras.main.width,
+                this.cameras.main.height,
+                'starfield'
+            );
+            
+            // Set the starfield to be above the background
+            this.starfield.setDepth(1);
+            
+            this.debugLog("Starfield created successfully");
+        } catch (error) {
+            console.error("Error creating starfield:", error);
+        }
+    }
+
     spawnEnemy() {
         try {
             // Check if threeManager exists
@@ -259,9 +314,9 @@ export default class GameplayScene extends Scene {
                 return; // Exit early if player doesn't exist
             }
 
-            // Scroll the background
-            if (this.background) {
-                this.background.tilePositionY -= 2;
+            // Scroll the starfield (not the background)
+            if (this.starfield) {
+                this.starfield.tilePositionY -= 2;
             }
 
             // Spawn enemies

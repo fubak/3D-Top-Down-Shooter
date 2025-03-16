@@ -13,7 +13,7 @@ export default class BootScene extends Phaser.Scene {
         }).setOrigin(0.5);
 
         // Load the background image
-        this.load.image('background', 'assets/images/background.png');
+        this.load.image('background', 'assets/images/SeagullThor_Martino_5149.jpg');
 
         // Loading progress events
         this.load.on('progress', (value) => {
