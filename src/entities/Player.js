@@ -21,6 +21,7 @@ export default class Player {
             // Set up player properties
             this.speed = 10;
             this.health = 100;
+            this.isAlive = true;
             this.isMoving = false;
             
             // Create bullet group
@@ -31,7 +32,13 @@ export default class Player {
             // Create physics body for collision detection (same size as enemy ships)
             this.body = scene.physics.add.sprite(x, y, 'bullet');
             this.body.setVisible(false); // Hide the sprite since we're using 3D model
-            this.body.setCircle(8); // Same collision circle size as enemy ships
+            this.body.setCircle(15); // Larger collision circle for better detection
+            this.body.setCollideWorldBounds(true); // Keep player within game bounds
+            this.body.setBounce(0); // No bounce
+            this.body.setImmovable(false); // Allow movement
+            
+            // Debug logging for physics body
+            console.log(`Player physics body created at (${x}, ${y}) with radius 15`);
             
             // Load the GLTF model instead of creating a temporary model
             this.loadPlayerModel();
@@ -190,6 +197,19 @@ export default class Player {
     
     update() {
         try {
+            // Make sure physics body is active and positioned correctly
+            if (this.body) {
+                this.body.active = true;
+                this.body.enable = true;
+                this.body.x = this.x;
+                this.body.y = this.y;
+                
+                // Debug body position occasionally
+                if (Math.random() < 0.01) { // Log roughly 1% of the time
+                    console.log(`Player body at (${this.body.x}, ${this.body.y}), active: ${this.body.active}, enabled: ${this.body.enable}`);
+                }
+            }
+            
             // Update bullets
             this.updateBullets();
             
@@ -271,13 +291,30 @@ export default class Player {
     
     takeDamage(amount) {
         try {
+            const oldHealth = this.health;
             this.health -= amount;
-            this.debugLog(`Player took ${amount} damage. Health: ${this.health}`);
+            
+            // Debug logging with more details
+            console.log(`Player takeDamage: ${amount} damage taken. Health: ${oldHealth} -> ${this.health}`);
+            this.debugLog(`Player took ${amount} damage. Health: ${oldHealth} -> ${this.health}`);
             
             if (this.health <= 0) {
                 this.health = 0;
                 this.isAlive = false;
                 this.debugLog("Player died");
+            }
+            
+            // Make sure the physics body is still active and properly positioned
+            if (this.body) {
+                // Ensure the body is active
+                this.body.active = true;
+                
+                // Make sure body position matches the player's position
+                this.body.x = this.x;
+                this.body.y = this.y;
+                
+                // Ensure the body is enabled for physics
+                this.body.enable = true;
             }
             
             // Flash the model red to indicate damage

@@ -22,6 +22,7 @@ export default class GameplayScene extends Scene {
         this.currentUser = null;
         this.damageFlash = null; // Reference to the damage flash overlay
         this.debugMode = true; // Enable debug mode
+        this.gameIsOver = false; // Added to track game over state
     }
 
     debugLog(message) {
@@ -233,6 +234,11 @@ export default class GameplayScene extends Scene {
 
     update() {
         try {
+            // Skip update if game is over or victory has been achieved
+            if (!this.player || this.gameIsOver) {
+                return;
+            }
+            
             // Get the current time
             const time = this.time.now;
             
@@ -250,6 +256,7 @@ export default class GameplayScene extends Scene {
                 this.player.update();
             } else {
                 this.debugLog("Player is null in update");
+                return; // Exit early if player doesn't exist
             }
 
             // Scroll the background
@@ -264,16 +271,19 @@ export default class GameplayScene extends Scene {
             }
 
             // Update enemies and remove those that are off screen
-            this.enemies = this.enemies.filter(enemy => {
-                const isAlive = enemy.update(time);
-                if (!isAlive) {
-                    enemy.destroy();
-                }
-                return isAlive;
-            });
+            if (this.enemies && this.enemies.length > 0) {
+                this.enemies = this.enemies.filter(enemy => {
+                    if (!enemy) return false;
+                    const isAlive = enemy.update(time);
+                    if (!isAlive) {
+                        enemy.destroy();
+                    }
+                    return isAlive;
+                });
+            }
 
             // Clean up enemy bullets that are off screen
-            if (this.enemyBullets) {
+            if (this.enemyBullets && this.enemyBullets.children) {
                 this.enemyBullets.children.each(bullet => {
                     if (bullet.y > 650) {
                         bullet.destroy();
@@ -287,8 +297,10 @@ export default class GameplayScene extends Scene {
             }
 
             // Check for collisions between player bullets and enemies
-            if (this.player && this.player.bullets) {
+            if (this.player && this.player.bullets && this.enemies && this.enemies.length > 0) {
                 this.enemies.forEach(enemy => {
+                    if (!enemy || !enemy.body) return;
+                    
                     this.physics.overlap(
                         this.player.bullets,
                         enemy.body,
@@ -300,12 +312,29 @@ export default class GameplayScene extends Scene {
             }
 
             // Check for collisions between enemy bullets and player
-            // This is now separate from enemy existence
             if (this.player && this.player.body && this.enemyBullets) {
+                // Make sure player body is active and visible
+                if (this.player.body) {
+                    this.player.body.active = true;
+                    this.player.body.enable = true;
+                    
+                    // Debug logging for player body
+                    console.log(`Player body status - Active: ${this.player.body.active}, Enabled: ${this.player.body.enable}, Position: (${this.player.body.x}, ${this.player.body.y}), Health: ${this.player.health}`);
+                }
+                
+                // Debug logging for enemy bullets
+                const activeBullets = this.enemyBullets.getChildren().filter(bullet => bullet.active);
+                console.log(`Active enemy bullets: ${activeBullets.length}`);
+                
+                // Use Phaser's built-in physics overlap for collision detection
                 this.physics.overlap(
                     this.enemyBullets,
                     this.player.body,
-                    this.handleEnemyBulletPlayerCollision,
+                    (bullet, playerBody) => {
+                        // Log collision for debugging
+                        console.log("Physics overlap detected: Enemy bullet hit player!");
+                        this.handleEnemyBulletPlayerCollision(bullet, playerBody);
+                    },
                     null,
                     this
                 );
@@ -322,9 +351,30 @@ export default class GameplayScene extends Scene {
         // Remove the enemy
         const index = this.enemies.indexOf(enemy);
         if (index !== -1) {
+            // Get the enemy's position before destroying it
+            const enemyPosition = {
+                x: enemy.model.position.x,
+                y: enemy.model.position.y,
+                z: enemy.model.position.z
+            };
+            
+            // Remove from array and destroy
             this.enemies.splice(index, 1);
             enemy.destroy();
             console.log('Enemy destroyed by player bullet');
+            
+            // Create explosion effect at the enemy's position
+            if (this.threeManager) {
+                this.threeManager.createExplosion(
+                    enemyPosition.x,
+                    enemyPosition.y,
+                    enemyPosition.z,
+                    {
+                        particleCount: 40,
+                        colors: [0xff4500, 0xff6000, 0xff7f00, 0xffbf00]
+                    }
+                );
+            }
             
             // Increment score
             this.score += 10;
@@ -341,11 +391,34 @@ export default class GameplayScene extends Scene {
     }
 
     handleEnemyBulletPlayerCollision(bullet, playerBody) {
+        // Prevent processing the same bullet twice
+        if (!bullet || !bullet.active) {
+            return;
+        }
+        
         // Destroy the bullet
         bullet.destroy();
         
-        // Reduce player health
-        this.health -= 10;
+        // Log collision for debugging
+        console.log("Enemy bullet hit player!");
+        
+        // Reduce player health using the player's takeDamage method
+        if (this.player) {
+            // Log player health before damage
+            console.log(`Before takeDamage: Player health = ${this.player.health}, Scene health = ${this.health}`);
+            
+            this.player.takeDamage(10);
+            
+            // Update our local health tracking to match the player's health
+            this.health = this.player.health;
+            
+            // Log player health after damage
+            console.log(`After takeDamage: Player health = ${this.player.health}, Scene health = ${this.health}`);
+        } else {
+            // Fallback if player reference is missing
+            this.health -= 10;
+            console.log(`Fallback damage: Scene health = ${this.health}`);
+        }
         
         // Update health text
         if (this.healthText) {
@@ -370,21 +443,7 @@ export default class GameplayScene extends Scene {
             });
         }
         
-        // Flash the player model red to indicate damage
-        if (this.player && this.player.model) {
-            // Store original color
-            const originalColor = this.player.model.material.color.getHex();
-            
-            // Set to red
-            this.player.model.material.color.setHex(0xff0000);
-            
-            // Reset after a short delay
-            this.time.delayedCall(200, () => {
-                if (this.player && this.player.model) {
-                    this.player.model.material.color.setHex(originalColor);
-                }
-            });
-        }
+        // Flash the player model red to indicate damage is now handled by the player's takeDamage method
         
         // Screen flash effect
         if (this.damageFlash) {
@@ -430,6 +489,10 @@ export default class GameplayScene extends Scene {
         if (this.player) {
             console.log("Stopping player shooting");
             this.player.stopShooting = true;
+            
+            // Destroy the player object
+            this.player.destroy();
+            this.player = null;
         }
         
         // Clear any active tweens
@@ -466,6 +529,9 @@ export default class GameplayScene extends Scene {
 
     gameOver() {
         console.log('Game Over!');
+        
+        // Set flag to indicate game is over
+        this.gameIsOver = true;
         
         // Save high score to Firebase if user is authenticated
         if (this.currentUser && this.score > 0) {
@@ -548,6 +614,9 @@ export default class GameplayScene extends Scene {
     
     victory() {
         console.log('Victory!');
+        
+        // Set a flag to indicate game is over
+        this.gameIsOver = true;
         
         // Clean up game elements thoroughly
         this.cleanupGameElements();
