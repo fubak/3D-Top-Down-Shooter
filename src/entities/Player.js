@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 
 export default class Player {
     constructor(scene, x, y) {
@@ -27,8 +28,13 @@ export default class Player {
             this.lastFired = 0;
             this.fireRate = 200; // ms between shots
             
-            // Create the 3D model
-            this.createTemporaryModel();
+            // Create physics body for collision detection (same size as enemy ships)
+            this.body = scene.physics.add.sprite(x, y, 'bullet');
+            this.body.setVisible(false); // Hide the sprite since we're using 3D model
+            this.body.setCircle(8); // Same collision circle size as enemy ships
+            
+            // Load the GLTF model instead of creating a temporary model
+            this.loadPlayerModel();
             
             // Set up input handling - we'll let the scene handle this now
             // The scene will call moveToPointer when needed
@@ -42,6 +48,65 @@ export default class Player {
     debugLog(message) {
         if (this.debugMode) {
             console.log(`[Player Debug] ${message}`);
+        }
+    }
+    
+    loadPlayerModel() {
+        try {
+            this.debugLog("Loading player GLTF model");
+            
+            // Create a temporary model while the GLTF is loading
+            this.createTemporaryModel();
+            
+            // Path to the GLTF model
+            const modelPath = 'assets/models/low_poly_space_ship/scene.gltf';
+            
+            // Use the global GLTFLoader since it's loaded via script tag
+            const loader = new GLTFLoader();
+            loader.load(
+                modelPath,
+                (gltf) => {
+                    this.debugLog("GLTF model loaded successfully");
+                    
+                    // Remove the temporary model if it exists
+                    if (this.model) {
+                        this.threeManager.remove(this.model);
+                    }
+                    
+                    // Get the model from the loaded GLTF
+                    this.model = gltf.scene;
+                    
+                    // Scale the model appropriately (smaller than before)
+                    this.model.scale.set(15, 15, 15);
+                    
+                    // Rotate the model to point towards the top of the screen
+                    this.model.rotation.x = -Math.PI / 2; // -90 degrees around X axis (instead of 90)
+                    this.model.rotation.y = 0;
+                    this.model.rotation.z = Math.PI; // 180 degrees around Z axis to flip it right-side up
+                    
+                    // Position the model at the player's position
+                    const threeCoords = this.threeManager.convertPhaserToThreeCoords(this.x, this.y);
+                    this.model.position.set(threeCoords.x, threeCoords.y, 0);
+                    
+                    // Add the model to the scene
+                    this.threeManager.add(this.model);
+                    
+                    this.debugLog(`GLTF model added to scene at position: ${threeCoords.x}, ${threeCoords.y}, 0`);
+                },
+                (progress) => {
+                    if (progress.lengthComputable) {
+                        const percentComplete = (progress.loaded / progress.total) * 100;
+                        this.debugLog(`Model loading progress: ${Math.round(percentComplete)}%`);
+                    }
+                },
+                (error) => {
+                    console.error("Error loading GLTF model:", error);
+                    this.debugLog("Failed to load GLTF model, using temporary model instead");
+                }
+            );
+        } catch (error) {
+            console.error("Error in loadPlayerModel:", error);
+            this.debugLog("Error loading GLTF model, using temporary model instead");
         }
     }
     
@@ -71,9 +136,9 @@ export default class Player {
             // Add to the Three.js scene
             this.threeManager.add(this.model);
             
-            this.debugLog(`Model created at position: ${this.model.position.x}, ${this.model.position.y}, ${this.model.position.z}`);
+            this.debugLog(`Temporary model created at position: ${this.model.position.x}, ${this.model.position.y}, ${this.model.position.z}`);
         } catch (error) {
-            console.error("Error creating player model:", error);
+            console.error("Error creating temporary player model:", error);
         }
     }
     
@@ -103,6 +168,12 @@ export default class Player {
             // Update Phaser position
             this.x = pointer.x;
             this.y = pointer.y;
+            
+            // Update physics body position
+            if (this.body) {
+                this.body.x = pointer.x;
+                this.body.y = pointer.y;
+            }
             
             // Convert to Three.js coordinates and update model
             if (this.model) {
@@ -210,16 +281,49 @@ export default class Player {
             }
             
             // Flash the model red to indicate damage
-            if (this.model && this.model.material) {
-                const originalColor = this.model.material.color.clone();
-                this.model.material.color.set(0xff0000);
-                
-                // Reset color after a short delay
-                setTimeout(() => {
-                    if (this.model && this.model.material) {
-                        this.model.material.color.copy(originalColor);
-                    }
-                }, 100);
+            if (this.model) {
+                // For GLTF models, we need to traverse all meshes
+                if (this.model.traverse) {
+                    // Store original colors
+                    const originalColors = [];
+                    
+                    // Set all materials to red
+                    this.model.traverse((child) => {
+                        if (child.isMesh && child.material) {
+                            // Store original color
+                            if (child.material.color) {
+                                originalColors.push({
+                                    mesh: child,
+                                    color: child.material.color.clone()
+                                });
+                                
+                                // Set to red
+                                child.material.color.set(0xff0000);
+                            }
+                        }
+                    });
+                    
+                    // Reset colors after a short delay
+                    setTimeout(() => {
+                        originalColors.forEach(item => {
+                            if (item.mesh && item.mesh.material && item.mesh.material.color) {
+                                item.mesh.material.color.copy(item.color);
+                            }
+                        });
+                    }, 100);
+                } 
+                // For simple models with a single material
+                else if (this.model.material) {
+                    const originalColor = this.model.material.color.clone();
+                    this.model.material.color.set(0xff0000);
+                    
+                    // Reset color after a short delay
+                    setTimeout(() => {
+                        if (this.model && this.model.material) {
+                            this.model.material.color.copy(originalColor);
+                        }
+                    }, 100);
+                }
             }
             
             return this.isAlive;
@@ -235,6 +339,25 @@ export default class Player {
             
             // Remove the 3D model from the scene
             if (this.model) {
+                // If it's a GLTF model (has children), traverse and dispose all geometries and materials
+                if (this.model.traverse) {
+                    this.model.traverse((child) => {
+                        if (child.isMesh) {
+                            if (child.geometry) {
+                                child.geometry.dispose();
+                            }
+                            
+                            if (child.material) {
+                                if (Array.isArray(child.material)) {
+                                    child.material.forEach(material => material.dispose());
+                                } else {
+                                    child.material.dispose();
+                                }
+                            }
+                        }
+                    });
+                }
+                
                 this.threeManager.remove(this.model);
                 this.model = null;
                 this.debugLog("3D model removed from scene");

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 
 export default class ThreeJSManager {
     constructor(phaserCanvas) {
@@ -108,7 +109,8 @@ export default class ThreeJSManager {
         return new Promise((resolve, reject) => {
             try {
                 this.debugLog(`Loading model from: ${path}`);
-                const loader = new THREE.GLTFLoader();
+                // Use the global GLTFLoader since it's loaded via script tag
+                const loader = new GLTFLoader();
                 loader.load(
                     path,
                     (gltf) => {
